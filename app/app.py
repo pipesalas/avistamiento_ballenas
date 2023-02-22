@@ -45,7 +45,7 @@ def main():
     # Display map of whale occurrences
     st.header('Occurrences Map')
     view_state = pdk.ViewState(
-        latitude=-30,
+        latitude=-40,
         longitude=-70,
         zoom=4,
         bearing=0,
