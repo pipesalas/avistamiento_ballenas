@@ -22,7 +22,7 @@ paths_chlor = [f'../data/chlorophyll_polygons_{diccionario_meses.get(mes_selecci
             f'../data/chlorophyll_points_{diccionario_meses.get(mes_seleccionado)}.csv']
 
 #df_temp = pd.read_csv(paths_temp[0])
-gdf_temp = gpd.read_file(f'../../data/temperature_polygons_{diccionario_meses.get(mes_seleccionado)}.json')
+gdf_temp = gpd.read_file(f'../data/temperature_polygons_{diccionario_meses.get(mes_seleccionado)}.json')
 
 # Custom color scale
 COLOR_RANGE = [
