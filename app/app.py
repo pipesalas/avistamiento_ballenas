@@ -4,6 +4,7 @@ import geopandas as gpd
 import requests
 import numpy as np
 import pydeck as pdk
+import plotly.express as px
 
 
 
@@ -12,7 +13,7 @@ def main():
     table_columns = ['gbifID', 'species', 'decimalLatitude', 'decimalLongitude', 'eventDate']
 
     # Create Streamlit app
-    st.title('Whale Occurrences in Chile')
+    st.title('Whale Occurrences in Chile :whale:')
     st.write('''Welcome to our Whale Occurrences in Chile app! 
     This application allows you to explore the occurrences of whale species recorded in the country of Chile, 
     using data from the Global Biodiversity Information Facility (GBIF). With this app, you can view a table 
@@ -43,7 +44,7 @@ def main():
 
 
     # Display map of whale occurrences
-    st.header('Occurrences Map')
+    st.header(f'Occurrences Map for {whale_species_selection} :whale2:')
     view_state = pdk.ViewState(
         latitude=-40,
         longitude=-70,
@@ -73,7 +74,19 @@ def main():
     st.pydeck_chart(r)
 
 
+    st.header('Avistamientos a lo largo del tiempo')
+    # Create line plot of number of observations over time
+    st.header('Number of Observations over Time')
+    if len(gdf) > 0:
+        fig = px.histogram(gdf, x='eventDate', nbins=len(gdf), title='Number of Observations over Time')
+        fig.update_xaxes(title='Date')
+        fig.update_yaxes(title='Number of Observations')
+        st.plotly_chart(fig)
+    else:
+        st.write('No occurrences found')
 
+
+@st.cache_data
 def request_gbif_api(taxonkey: int = 2440735):
     # Define GBIF API endpoint URL
     api_url = 'https://api.gbif.org/v1/occurrence/search'
