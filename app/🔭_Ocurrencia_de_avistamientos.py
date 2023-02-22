@@ -9,6 +9,11 @@ import plotly.express as px
 
 
 def main():
+    st.set_page_config(
+        page_title="Vuelvealoceano",
+        page_icon="whale",
+        layout="wide",
+    )
     # Define columns to display in table
     table_columns = ['gbifID', 'species', 'decimalLatitude', 'decimalLongitude', 'eventDate']
 
@@ -76,7 +81,6 @@ def main():
 
     st.header('Avistamientos a lo largo del tiempo')
     # Create line plot of number of observations over time
-    st.header('Number of Observations over Time')
     if len(gdf) > 0:
         fig = px.histogram(gdf, x='eventDate', nbins=len(gdf), title='Number of Observations over Time')
         fig.update_xaxes(title='Date')
