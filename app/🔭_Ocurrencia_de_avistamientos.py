@@ -82,7 +82,7 @@ def main():
     st.header('Avistamientos a lo largo del tiempo')
     # Create line plot of number of observations over time
     if len(gdf) > 0:
-        fig = px.histogram(gdf, x='eventDate', nbins=len(gdf), title='Number of Observations over Time')
+        fig = px.histogram(gdf.query('eventDate>="1990-01-01"'), x='eventDate', nbins=len(gdf), title='Number of Observations over Time')
         fig.update_xaxes(title='Date')
         fig.update_yaxes(title='Number of Observations')
         st.plotly_chart(fig)
