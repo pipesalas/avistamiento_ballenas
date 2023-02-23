@@ -10,7 +10,9 @@ import os
 
 
 st.header('Visualizador de las condiciones marítimas :ocean:')
-st.write(os.getcwd() )
+st.write(os.getcwd())
+st.write(os.listdir())
+
 diccionario_meses = {'enero 2023': '2023-01-01_to_2023-02-01',
                      'febrero 2023': '2023-02-01_to_2023-03-01',}
 
