@@ -8,7 +8,7 @@ import pydeck as pdk
 
 
 
-st.header('Visualizador de las condiciones marítimas')
+st.header('Visualizador de las condiciones marítimas :ocean:')
 
 diccionario_meses = {'enero 2023': '2023-01-01_to_2023-02-01',
                      'febrero 2023': '2023-02-01_to_2023-03-01',}
