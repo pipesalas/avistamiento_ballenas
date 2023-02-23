@@ -6,10 +6,11 @@ from shapely.geometry import MultiPoint
 import streamlit as st
 import pydeck as pdk
 
+import os
 
 
 st.header('Visualizador de las condiciones marítimas :ocean:')
-
+st.write(os.getcwd() )
 diccionario_meses = {'enero 2023': '2023-01-01_to_2023-02-01',
                      'febrero 2023': '2023-02-01_to_2023-03-01',}
 
@@ -22,6 +23,8 @@ paths_temp = [f'../data/temperature_polygons_{diccionario_meses.get(mes_seleccio
 
 paths_chlor = [f'../data/chlorophyll_polygons_{diccionario_meses.get(mes_seleccionado)}.csv',
             f'../data/chlorophyll_points_{diccionario_meses.get(mes_seleccionado)}.csv']
+
+
 
 df_temp = pd.read_csv(paths_temp[1])
 
