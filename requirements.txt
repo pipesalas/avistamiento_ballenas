@@ -5,3 +5,4 @@ geopandas==0.10.2
 numpy==1.20.3
 pydeck==0.7.1
 plotly==5.7.0
+gdal==3.0.2
