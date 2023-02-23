@@ -15,8 +15,9 @@ diccionario_meses = {'enero 2023': '2023-01-01_to_2023-02-01',
 
 mes_seleccionado = st.selectbox('Seleccionamos un mes', diccionario_meses.keys())
 
+
 paths_temp = [f'../data/temperature_polygons_{diccionario_meses.get(mes_seleccionado)}.csv',
-            f'../data/temperature_points_{diccionario_meses.get(mes_seleccionado)}.csv']
+            f'./data/temperature_points_{diccionario_meses.get(mes_seleccionado)}.csv']
 
 
 paths_chlor = [f'../data/chlorophyll_polygons_{diccionario_meses.get(mes_seleccionado)}.csv',
