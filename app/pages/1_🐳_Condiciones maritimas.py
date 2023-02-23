@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import geopandas as gpd
 from config import DATES
+from shapely.geometry import MultiPoint
 import streamlit as st
 import pydeck as pdk
 
@@ -21,8 +22,23 @@ paths_temp = [f'../data/temperature_polygons_{diccionario_meses.get(mes_seleccio
 paths_chlor = [f'../data/chlorophyll_polygons_{diccionario_meses.get(mes_seleccionado)}.csv',
             f'../data/chlorophyll_points_{diccionario_meses.get(mes_seleccionado)}.csv']
 
-#df_temp = pd.read_csv(paths_temp[0])
-gdf_temp = gpd.read_file(f'../data/temperature_polygons_{diccionario_meses.get(mes_seleccionado)}.json')
+df_temp = pd.read_csv(paths_temp[1])
+
+dict_geometries = {}
+for val in df_temp.temp.unique():
+    geometry = []
+    for row in df_temp.query(f'temp=={val}').index:
+        geometry += [(df_temp.loc[row, 'lon'], df_temp.loc[row, 'lat'])]
+
+    dict_geometries[val] = gpd.GeoSeries(MultiPoint(geometry)).convex_hull[0]
+
+gdf = (pd.DataFrame().from_dict(dict_geometries, orient='index')
+                   .reset_index()
+                   .rename(columns={'index':'temp', 0:'geometry'}))
+    
+gdf['coordinates'] = gdf.geometry.apply(lambda x: [x.exterior.coords])
+gdf = gpd.GeoDataFrame(gdf, geometry='geometry')
+gdf_temp = gdf[['temp','geometry']].copy()
 
 # Custom color scale
 COLOR_RANGE = [
