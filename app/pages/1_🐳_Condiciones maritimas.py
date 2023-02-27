@@ -14,10 +14,10 @@ def main():
     st.header('Visualizador de las condiciones marítimas :ocean:')
 
     diccionario_meses = {
-                        'septiembre 2023': '2022-09-01_to_2022-10-01',
-                        'octubre 2023': '2022-10-01_to_2022-11-01',
-                        'noviembre 2023': '2022-11-01_to_2022-12-01',
-                        'diciembre 2023': '2022-12-01_to_2023-01-01',
+                        'septiembre 2022': '2022-09-01_to_2022-10-01',
+                        'octubre 2022': '2022-10-01_to_2022-11-01',
+                        'noviembre 2022': '2022-11-01_to_2022-12-01',
+                        'diciembre 2022': '2022-12-01_to_2023-01-01',
                         'enero 2023': '2023-01-01_to_2023-02-01',
                         'febrero 2023': '2023-02-01_to_2023-03-01',}
 
@@ -88,7 +88,7 @@ def plot_chlorophyll(gdf):
         pickable=True,
     )
 
-    tooltip = {"html": "<b>Value per Square Meter:</b> {chlor}"}
+    tooltip = {"html": "<b>Value per Square Meter:</b> {chlor_raw}"}
 
     r = pdk.Deck(
         polygon_layer,
