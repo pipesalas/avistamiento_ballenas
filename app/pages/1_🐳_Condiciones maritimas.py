@@ -43,6 +43,9 @@ def main():
     plot_chlorophyll(gdf_chlor)
 
 
+    
+
+
 
 def plot_chlorophyll(gdf):
 
@@ -69,8 +72,11 @@ def plot_chlorophyll(gdf):
 
 
     st.header('Chlorophyll on sea surface 🌡')
+
+    ruta = (gpd.read_file('app/data/Track_OOO.gpx', layer='tracks')).explode().reset_index(drop=True)
+
     view_state = pdk.ViewState(
-        **{"latitude": -40, "longitude": -73.8, "zoom": 9.5, "maxZoom": 16, "pitch": 20, "bearing": 0}
+        **{"latitude": -39.96, "longitude": -73.7, "zoom": 10, "maxZoom": 16, "pitch": 20, "bearing": 0}
     )
 
     polygon_layer = pdk.Layer(
@@ -87,11 +93,20 @@ def plot_chlorophyll(gdf):
         #auto_highlight=True,
         pickable=True,
     )
+    st.write(gdf)
+    tooltip = {"html": "<b>Chlorophyll:</b> {chlor_raw} mg/m^3"}
 
-    tooltip = {"html": "<b>Value per Square Meter:</b> {chlor_raw}"}
-
+    layer = pdk.Layer(
+    'PathLayer',
+    data=ruta,
+    get_path='geometry.coordinates',
+    get_color=[255, 255, 0],
+    width_scale=20,
+    width_min_pixels=2,
+    get_width='width'
+    )
     r = pdk.Deck(
-        polygon_layer,
+        [polygon_layer, layer],
         initial_view_state=view_state,
         map_style=pdk.map_styles.LIGHT,
         tooltip=tooltip,
@@ -134,8 +149,12 @@ def plot_temperature(gdf_temp):
 
 
     st.header('Temperature on sea surface 🌡')
+
+    ruta = (gpd.read_file('app/data/Track_OOO.gpx', layer='tracks')).explode().reset_index(drop=True)
+
+
     view_state = pdk.ViewState(
-        **{"latitude": -40, "longitude": -73.8, "zoom": 9.5, "maxZoom": 16, "pitch": 20, "bearing": 0}
+        **{"latitude": -39.96, "longitude": -73.7, "zoom": 10, "maxZoom": 16, "pitch": 20, "bearing": 0}
     )
 
     polygon_layer = pdk.Layer(
@@ -153,10 +172,21 @@ def plot_temperature(gdf_temp):
         pickable=True,
     )
 
-    tooltip = {"html": "<b>Value per Square Meter:</b> {temp}"}
+    tooltip = {"html": "<b>Temperature :</b> {temp} ºC", "text": "{name}"}
+
+
+    layer = pdk.Layer(
+    'PathLayer',
+    data=ruta,
+    get_path='geometry.coordinates',
+    get_color=[255, 255, 0],
+    width_scale=20,
+    width_min_pixels=2,
+    get_width='width'
+    )
 
     r = pdk.Deck(
-        polygon_layer,
+        [polygon_layer, layer],
         initial_view_state=view_state,
         map_style=pdk.map_styles.LIGHT,
         tooltip=tooltip,
