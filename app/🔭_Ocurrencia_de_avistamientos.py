@@ -19,13 +19,11 @@ def main():
 
     # Create Streamlit app
     st.title('Whale Occurrences in Chile :whale:')
-    st.write('''Welcome to our Whale Occurrences in Chile app! 
-    This application allows you to explore the occurrences of whale species recorded in the country of Chile, 
-    using data from the Global Biodiversity Information Facility (GBIF). With this app, you can view a table 
-    of occurrence data for each whale species, as well as a map of the locations where these species have 
-    been observed. You can zoom in and out of the map and click on individual markers to view more information
-    about each occurrence. This app is a great tool for scientists, educators, and anyone interested in 
-    learning more about the distribution of whale species in Chile.''')
+    st.write('''¡Bienvenido a nuestra aplicación Ocurrencias de Ballenas en Chile! 
+    Esta aplicación le permite explorar las ocurrencias de especies de ballenas registradas en el país de Chile, utilizando datos de Global Biodiversity Information Facility (GBIF). 
+    Con esta aplicación, puede ver una tabla de datos de ocurrencia para cada especie de ballena, así como un mapa de las ubicaciones donde se han observado estas especies. 
+    Puede acercar y alejar el mapa y hacer clic en marcadores individuales para ver más información sobre cada ocurrencia. 
+    Esta aplicación es una gran herramienta para científicos, educadores y cualquier persona interesada en aprender más sobre la distribución de las especies de ballenas en Chile.''')
 
 
     # Define list of whale species with GBIF taxon keys
@@ -75,7 +73,10 @@ def main():
         get_line_width=1,)
 
     tooltip = {'html': '<b>Species:</b> {species}<br><b>Event Date:</b> {eventDate}'}
-    r = pdk.Deck(layers=[layer], initial_view_state=view_state, tooltip=tooltip)
+    r = pdk.Deck(layers=[layer], 
+                 initial_view_state=view_state, 
+                 tooltip=tooltip, 
+                 map_style=pdk.map_styles.LIGHT,)
     st.pydeck_chart(r)
 
 
