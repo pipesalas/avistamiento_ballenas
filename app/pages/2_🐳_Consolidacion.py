@@ -6,6 +6,7 @@ from shapely.geometry import MultiPoint
 import streamlit as st
 import pydeck as pdk
 import os
+import requests
 
 
 def main():
@@ -31,17 +32,48 @@ def main():
                         'diciembre 2022': '2022-12-01_to_2023-01-01',
                         'enero 2023': '2023-01-01_to_2023-02-01',
                         'febrero 2023': '2023-02-01_to_2023-03-01',}
+    table_columns = ['gbifID', 'species', 'decimalLatitude', 'decimalLongitude', 'eventDate']
+    whale_species = {
+        'Blue whale': 2440735,
+        'Fin whale': 2440718,
+        'Humpback whale': 5220086,
+        'Killer whale': 2440483,
+        'Gray whale': 2440704
+    }
 
-    col1, _ = st.columns(2)
+    col1, col2 = st.columns(2)
     mes_seleccionado = col1.selectbox('Seleccionamos un mes', diccionario_meses.keys())
+    whale_species_selection = col2.selectbox('Select whale species', list(whale_species.keys()))
+        
+
+    # Create Streamlit app
+    st.title('Whale Occurrences in Chile :whale:')
+    st.write('''¡Bienvenido a nuestra aplicación Ocurrencias de Ballenas en Chile! 
+    Esta aplicación le permite explorar las ocurrencias de especies de ballenas registradas en el país de Chile, utilizando datos de Global Biodiversity Information Facility (GBIF). 
+    Con esta aplicación, puede ver una tabla de datos de ocurrencia para cada especie de ballena, así como un mapa de las ubicaciones donde se han observado estas especies. 
+    Puede acercar y alejar el mapa y hacer clic en marcadores individuales para ver más información sobre cada ocurrencia. 
+    Esta aplicación es una gran herramienta para científicos, educadores y cualquier persona interesada en aprender más sobre la distribución de las especies de ballenas en Chile.''')
+
+
+
+
+    
+    
+    
+   
+    st.subheader(f'Occurrences Map for {whale_species_selection} :whale2:')
+
 
     # cargamos datos
     gdf_temp = load_temperature_geodataframe(diccionario_meses.get(mes_seleccionado))
     gdf_chlor = load_chlorophyll_geodataframe(diccionario_meses.get(mes_seleccionado))
+    gdf_ballenas = request_gbif_api(whale_species.get(whale_species_selection))
+    ruta = load_ruta()
     
-    
+
+
     st.header('Clorofila en la superficie del oceano 🍀')
-    plot_chlorophyll(gdf_chlor)
+    plot_chlorophyll(gdf_chlor, gdf_ballenas)
     st.caption('''Se sabe que las ballenas se alimentan de fitoplancton, que son plantas microscópicas que viven en el océano. 
     Estas plantas dependen de la luz solar y los nutrientes para crecer y, como resultado, su abundancia a menudo está relacionada con la concentración de clorofila en el agua. 
     La clorofila es un pigmento verde que ayuda a estas plantas a convertir la luz solar en energía a través de la fotosíntesis. 
@@ -50,7 +82,7 @@ def main():
     a comprender mejor el comportamiento y la distribución de las ballenas.''')
     
     st.header('Temperatura en la superficie del oceano 🌡')
-    plot_temperature(gdf_temp)
+    plot_temperature(gdf_temp, gdf_ballenas)
     st.caption('''La relación entre la presencia de fitoplancton y la temperatura del mar es compleja y, a menudo, depende de una variedad de factores. 
     Generalmente, el fitoplancton prospera en aguas más cálidas, pero hay muchos otros factores que entran en juego, como la disponibilidad de nutrientes, los niveles de luz y el movimiento del agua. 
     La temperatura ciertamente puede desempeñar un papel en el crecimiento y la distribución del fitoplancton, pero no es el único factor determinante.
@@ -66,7 +98,7 @@ def main():
 
     with tab_clor:
         st.header('Clorofila en la superficie del oceano 🍀')
-        plot_chlorophyll(gdf_chlor)
+        plot_chlorophyll(gdf_chlor, gdf_ballenas)
         st.caption('''Se sabe que las ballenas se alimentan de fitoplancton, que son plantas microscópicas que viven en el océano. 
         Estas plantas dependen de la luz solar y los nutrientes para crecer y, como resultado, su abundancia a menudo está relacionada con la concentración de clorofila en el agua. 
         La clorofila es un pigmento verde que ayuda a estas plantas a convertir la luz solar en energía a través de la fotosíntesis. 
@@ -76,7 +108,7 @@ def main():
         
     with tab_temp:
         st.header('Temperatura en la superficie del oceano 🌡')
-        plot_temperature(gdf_temp)
+        plot_temperature(gdf_temp, gdf_ballenas)
         st.caption('''La relación entre la presencia de fitoplancton y la temperatura del mar es compleja y, a menudo, depende de una variedad de factores. 
         Generalmente, el fitoplancton prospera en aguas más cálidas, pero hay muchos otros factores que entran en juego, como la disponibilidad de nutrientes, los niveles de luz y el movimiento del agua. 
         La temperatura ciertamente puede desempeñar un papel en el crecimiento y la distribución del fitoplancton, pero no es el único factor determinante.
@@ -90,18 +122,24 @@ def main():
 @st.cache_data
 def load_temperature_geodataframe(mes: str) -> gpd.GeoDataFrame:
     gdf_temp = gpd.read_file(f'app/data/temperature_polygons_{mes}.json')
+    gdf_temp = gdf_temp.set_crs('epsg:4326')
+    gdf_temp['text'] = gdf_temp.temp.apply(lambda x: f"<b>Temperature :</b> {x: .1f} ºC")
     return gdf_temp
     
 
 @st.cache_data
 def load_chlorophyll_geodataframe(mes: str) -> gpd.GeoDataFrame:
     gdf_temp = gpd.read_file(f'app/data/chlorophyll_polygons_{mes}.json')
+    gdf_temp = gdf_temp.set_crs('epsg:4326')
+    gdf_temp['text'] = gdf_temp.chlor_raw.apply(lambda x: f"<b>Chlorophyll:</b> {x} mg/m³")
     return gdf_temp
 
 
 @st.cache_data
 def load_ruta() -> gpd.GeoDataFrame:
     ruta = (gpd.read_file('app/data/Track_OOO.gpx', layer='tracks')).explode().reset_index(drop=True)
+    ruta = ruta.set_crs('epsg:4326')
+    ruta['text'] = ruta.name.apply(lambda x: f'ruta {x}')
     return ruta
 
 
@@ -112,7 +150,9 @@ def define_viewstate() -> pdk.ViewState:
     )
 
 
-def plot_chlorophyll(gdf):
+
+
+def plot_chlorophyll(gdf, gdf_ballenas):
 
     # Custom color scale
     COLOR_RANGE = [[230, 250, 250], #E6FAFA
@@ -151,12 +191,9 @@ def plot_chlorophyll(gdf):
         wireframe=True,
     )
 
-    tooltips = [
-    {'html': "<b>Chlorophyll:</b> {chlor_raw} mg/m³"},
-    {'html': "<b>Name:</b> {name}"}
-]
+    
 
-    layer = pdk.Layer(
+    ruta = pdk.Layer(
                     'PathLayer',
                     data=ruta,
                     get_path='geometry.coordinates',
@@ -167,19 +204,33 @@ def plot_chlorophyll(gdf):
                     pickable=True,
                     )
 
+    layer = pdk.Layer(
+                    'ScatterplotLayer',
+                    data=gdf_ballenas,
+                    get_position=['decimalLongitude', 'decimalLatitude'],
+                    get_radius=500,
+                    get_fill_color=[255, 0, 0],
+                    pickable=True,
+                    auto_highlight=True,
+                    opacity=0.8,
+                    stroked=True,
+                    filled=True,
+                    extruded=False,
+                    wireframe=True,
+                    get_line_color=[255, 255, 255],
+                    get_line_width=1,
+                    )
+
     r = pdk.Deck(
-        [polygon_layer, layer],
+        [polygon_layer, ruta, layer],
         initial_view_state=define_viewstate(),
         map_style=pdk.map_styles.LIGHT,
-        tooltip=tooltips,
+        tooltip={'html': "{text}"},
     )
     st.pydeck_chart(r)
 
 
-
-
-
-def plot_temperature(gdf_temp):
+def plot_temperature(gdf_temp, gdf_ballenas):
 
     # Custom color scale
     COLOR_RANGE = [
@@ -222,28 +273,90 @@ def plot_temperature(gdf_temp):
         get_line_color=[255, 255, 255],
         pickable=True,
     )
-
-    tooltip = {"html": "<b>Temperature :</b> {temp} ºC"}
    
 
+    ruta = pdk.Layer(
+        'PathLayer',
+        data=ruta,
+        get_path='geometry.coordinates',
+        get_color=[255, 255, 0],
+        width_scale=20,
+        width_min_pixels=2,
+        get_width='width',
+        pickable=False,
+        )
+
     layer = pdk.Layer(
-    'PathLayer',
-    data=ruta,
-    get_path='geometry.coordinates',
-    get_color=[255, 255, 0],
-    width_scale=20,
-    width_min_pixels=2,
-    get_width='width',
-    pickable=False,
-    )
+                    'ScatterplotLayer',
+                    data=gdf_ballenas,
+                    get_position=['decimalLongitude', 'decimalLatitude'],
+                    get_radius=500,
+                    get_fill_color=[255, 0, 0],
+                    pickable=True,
+                    auto_highlight=True,
+                    opacity=0.8,
+                    stroked=True,
+                    filled=True,
+                    extruded=False,
+                    wireframe=True,
+                    get_line_color=[255, 255, 255],
+                    get_line_width=1,
+                    )
 
     r = pdk.Deck(
-        [polygon_layer, layer],
+        [polygon_layer, layer, ruta],
         initial_view_state=define_viewstate(),
         map_style=pdk.map_styles.LIGHT,
-        tooltip=tooltip,
+        tooltip={'html': "{text}"},
     )
     st.pydeck_chart(r)
+
+
+
+
+
+
+@st.cache_data
+def request_gbif_api(taxonkey: int = 2440735):
+    # Define GBIF API endpoint URL
+    api_url = 'https://api.gbif.org/v1/occurrence/search'
+
+    # Define query parameters
+    params = {
+        'taxonKey': int(taxonkey),   # GBIF taxon key for whales
+        'country': 'CL',    # ISO-3166 alpha-2 country code for Chile
+        'limit': 300,       # Maximum number of occurrences to retrieve per request
+        'offset': 0         # Offset for pagination (starts at 0)
+    }
+
+    # Initialize empty list for occurrences
+    occurrences = []
+    # Loop over all pages of occurrences
+    while True:
+        # Send GET request to API endpoint with query parameters
+        response = requests.get(api_url, params=params)
+        results = response.json()['results']
+        occurrences.extend(results)
+
+        if len(results) < params['limit']:
+            break
+
+        # Increment offset for next page of occurrences
+        params['offset'] += params['limit']
+
+
+    df = pd.DataFrame({'gbifID': [k['gbifID'] for k in occurrences], 
+                    'species': [k['species'] if 'species' in k.keys() else np.nan for k in occurrences],
+                    'decimalLatitude': [k['decimalLatitude'] if 'decimalLatitude' in k.keys() else np.nan for k in occurrences],
+                    'decimalLongitude': [k['decimalLongitude'] if 'decimalLongitude' in k.keys() else np.nan for k in occurrences],
+                    'eventDate': [k['eventDate'] if 'eventDate' in k.keys() else np.nan for k in occurrences]})
+
+    df = df.dropna()
+    gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df['decimalLongitude'], df['decimalLatitude']), crs='EPSG:4326')
+    gdf['text'] = gdf.apply(lambda x: x.species + ' ' + x.eventDate[:10], axis=1)
+    return gdf
+
+
 
 
 main()
