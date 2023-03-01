@@ -60,9 +60,6 @@ def main():
     gdf_ballenas = request_gbif_api(whale_species.get(whale_species_selection))
     ruta = load_ruta()
 
-
-    st.header('Condiciones en la superficie del oceano 🍀🌡')
-
     col1, col2 = st.columns(2)
 
     with col1:
