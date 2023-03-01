@@ -21,7 +21,7 @@ def main():
     }
     )
 
-    st.title('Visualizador de las condiciones marítimas :ocean: :whale:')
+    st.title(':ocean: Visualizador de las condiciones marítimas  :whale: 🐬')
 
     st.caption('''Para visualizar las condiciones marinas usamos la integración de ee BLABLA y agrupamos por cuadrados, sacamos la MEDIANA del mes, blabla''' )
 
@@ -59,35 +59,14 @@ def main():
     gdf_chlor = load_chlorophyll_geodataframe(diccionario_meses.get(mes_seleccionado))
     gdf_ballenas = request_gbif_api(whale_species.get(whale_species_selection))
     ruta = load_ruta()
-    
 
 
-    st.subheader(f'Clorofila en la superficie del oceano 🍀, ballena {whale_species_selection}')
-    plot_chlorophyll(gdf_chlor, gdf_ballenas)
-    st.caption('''Se sabe que las ballenas se alimentan de fitoplancton, que son plantas microscópicas que viven en el océano. 
-    Estas plantas dependen de la luz solar y los nutrientes para crecer y, como resultado, su abundancia a menudo está relacionada con la concentración de clorofila en el agua. 
-    La clorofila es un pigmento verde que ayuda a estas plantas a convertir la luz solar en energía a través de la fotosíntesis. 
-    Por lo tanto, las altas concentraciones de clorofila en el agua suelen ser un indicador de la gran abundancia de fitoplancton, que a su vez puede atraer a las ballenas a la zona. 
-    En otras palabras, las áreas con altas concentraciones de clorofila pueden ser buenos lugares de alimentación para las ballenas, y monitorear los niveles de clorofila puede ayudarnos
-    a comprender mejor el comportamiento y la distribución de las ballenas.''')
-    
-    st.subheader(f'Temperatura en la superficie del oceano 🌡, ballena {whale_species_selection}')
-    plot_temperature(gdf_temp, gdf_ballenas)
-    st.caption('''La relación entre la presencia de fitoplancton y la temperatura del mar es compleja y, a menudo, depende de una variedad de factores. 
-    Generalmente, el fitoplancton prospera en aguas más cálidas, pero hay muchos otros factores que entran en juego, como la disponibilidad de nutrientes, los niveles de luz y el movimiento del agua. 
-    La temperatura ciertamente puede desempeñar un papel en el crecimiento y la distribución del fitoplancton, pero no es el único factor determinante.
-    Del mismo modo, la relación entre la temperatura y la presencia de ballenas también es compleja. Algunas especies de ballenas prefieren aguas más frías, mientras que otras prefieren aguas más cálidas. 
-    Además, el comportamiento de las ballenas puede verse influenciado por factores como la disponibilidad de presas, los patrones de apareamiento y las rutas de migración. 
-    Si bien la temperatura ciertamente puede ser un factor para determinar el comportamiento de las ballenas, es solo uno de los muchos factores que deben tenerse en cuenta.''')
+    st.header('Condiciones en la superficie del oceano 🍀🌡')
 
+    col1, col2 = st.columns(2)
 
-    st.markdown('---')
-    st.markdown('---')
-
-    tab_clor, tab_temp = st.tabs(['Clorofila', 'Temperatura'])
-
-    with tab_clor:
-        st.header('Clorofila en la superficie del oceano 🍀')
+    with col1:
+        st.header('Clorofila')
         plot_chlorophyll(gdf_chlor, gdf_ballenas)
         st.caption('''Se sabe que las ballenas se alimentan de fitoplancton, que son plantas microscópicas que viven en el océano. 
         Estas plantas dependen de la luz solar y los nutrientes para crecer y, como resultado, su abundancia a menudo está relacionada con la concentración de clorofila en el agua. 
@@ -96,8 +75,8 @@ def main():
         En otras palabras, las áreas con altas concentraciones de clorofila pueden ser buenos lugares de alimentación para las ballenas, y monitorear los niveles de clorofila puede ayudarnos
         a comprender mejor el comportamiento y la distribución de las ballenas.''')
         
-    with tab_temp:
-        st.header('Temperatura en la superficie del oceano 🌡')
+    with col2:
+        st.header('Temperatura')
         plot_temperature(gdf_temp, gdf_ballenas)
         st.caption('''La relación entre la presencia de fitoplancton y la temperatura del mar es compleja y, a menudo, depende de una variedad de factores. 
         Generalmente, el fitoplancton prospera en aguas más cálidas, pero hay muchos otros factores que entran en juego, como la disponibilidad de nutrientes, los niveles de luz y el movimiento del agua. 
@@ -180,7 +159,7 @@ def plot_chlorophyll(gdf, gdf_ballenas):
                     )
 
     
-    ICON_URL = "https://github.com/pipesalas/avistamiento_ballenas/blob/main/app/whale.png"
+    ICON_URL = "https://em-content.zobj.net/thumbs/240/facebook/327/whale_1f40b.png"
 
     icon_data = {
         "url": ICON_URL,
