@@ -23,7 +23,12 @@ def main():
 
     st.title(':ocean: Visualizador de las condiciones marítimas  :whale: 🐬')
 
-    st.caption('''Para visualizar las condiciones marinas usamos la integración de ee BLABLA y agrupamos por cuadrados, sacamos la MEDIANA del mes, blabla''' )
+    #st.('''Para visualizar las condiciones maritimas usamos google earth engine, sacamos la MEDIANA del mes, blabla''' )
+    st.markdown('''**¡Bienvenido a nuestra aplicación Ocurrencias de Ballenas en Chile! **''')
+    st.markdown('''Esta aplicación le permite explorar las ocurrencias de especies de ballenas registradas en el país de Chile, utilizando datos de Global Biodiversity Information Facility (GBIF). 
+    Con esta aplicación, puede ver una tabla de datos de ocurrencia para cada especie de ballena, así como un mapa de las ubicaciones donde se han observado estas especies. 
+    Puede acercar y alejar el mapa y hacer clic en marcadores individuales para ver más información sobre cada ocurrencia. 
+    Esta aplicación es una gran herramienta para científicos, educadores y cualquier persona interesada en aprender más sobre la distribución de las especies de ballenas en Chile.''')
 
     
     diccionario_meses = {'septiembre 2022': '2022-09-01_to_2022-10-01',
@@ -46,13 +51,7 @@ def main():
     whale_species_selection = col2.selectbox('Select whale species', list(whale_species.keys()))
         
 
-    # Create Streamlit app
-    st.write('''¡Bienvenido a nuestra aplicación Ocurrencias de Ballenas en Chile! 
-    Esta aplicación le permite explorar las ocurrencias de especies de ballenas registradas en el país de Chile, utilizando datos de Global Biodiversity Information Facility (GBIF). 
-    Con esta aplicación, puede ver una tabla de datos de ocurrencia para cada especie de ballena, así como un mapa de las ubicaciones donde se han observado estas especies. 
-    Puede acercar y alejar el mapa y hacer clic en marcadores individuales para ver más información sobre cada ocurrencia. 
-    Esta aplicación es una gran herramienta para científicos, educadores y cualquier persona interesada en aprender más sobre la distribución de las especies de ballenas en Chile.''')
-
+   
 
     # cargamos datos
     gdf_temp = load_temperature_geodataframe(diccionario_meses.get(mes_seleccionado))
