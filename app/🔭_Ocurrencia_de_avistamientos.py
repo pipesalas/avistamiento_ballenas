@@ -24,7 +24,7 @@ def main():
     st.title(':ocean: Visualizador de las condiciones marítimas  :whale: 🐬')
 
     #st.('''Para visualizar las condiciones maritimas usamos google earth engine, sacamos la MEDIANA del mes, blabla''' )
-    st.markdown('''**¡Bienvenido a nuestra aplicación Ocurrencias de Ballenas en Chile! **''')
+    st.markdown('''*¡Bienvenido a nuestra aplicación Ocurrencias de Ballenas en Chile! *''')
     st.markdown('''Esta aplicación le permite explorar las ocurrencias de especies de ballenas registradas en el país de Chile, utilizando datos de Global Biodiversity Information Facility (GBIF). 
     Con esta aplicación, puede ver una tabla de datos de ocurrencia para cada especie de ballena, así como un mapa de las ubicaciones donde se han observado estas especies. 
     Puede acercar y alejar el mapa y hacer clic en marcadores individuales para ver más información sobre cada ocurrencia. 
