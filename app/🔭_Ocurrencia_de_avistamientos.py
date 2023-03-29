@@ -21,14 +21,16 @@ def main():
     }
     )
 
-    st.title(':ocean: Visualizador de las condiciones marítimas  :whale: 🐬')
+    st.title('🐋 Avistamiento de ballenas y condiciones marítimas :ocean:')
 
     #st.('''Para visualizar las condiciones maritimas usamos google earth engine, sacamos la MEDIANA del mes, blabla''' )
-    st.markdown('**¡Bienvenido a nuestra aplicación Ocurrencias de Ballenas en Chile! ***')
-    st.markdown('''Esta aplicación le permite explorar las ocurrencias de especies de ballenas registradas en el país de Chile, utilizando datos de Global Biodiversity Information Facility (GBIF). 
-    Con esta aplicación, puede ver una tabla de datos de ocurrencia para cada especie de ballena, así como un mapa de las ubicaciones donde se han observado estas especies. 
-    Puede acercar y alejar el mapa y hacer clic en marcadores individuales para ver más información sobre cada ocurrencia. 
-    Esta aplicación es una gran herramienta para científicos, educadores y cualquier persona interesada en aprender más sobre la distribución de las especies de ballenas en Chile.''')
+    st.markdown('**Bienvenido a nuestra aplicación de avistamiento de observaciones de Ballenas en Chile**')
+    st.markdown('''Esta aplicación permite explorar los avistamientos de ballenas registradas en el país de Chile, 
+    utilizando datos de Global Biodiversity Information Facility (GBIF).''')
+    st.markdown('''
+    Los datos de las condiciones marítimas, clorofila y temperatura, son obtenidas de la misión espacial JAXA y descargadas
+     usando google earth engine y corresponden al valor mediano de todas las observaciones del mes.
+    Puede acercar y alejar el mapa y hacer clic en marcadores individuales para ver más información sobre cada ocurrencia. ''')
 
     
     diccionario_meses = {'septiembre 2022': '2022-09-01_to_2022-10-01',
