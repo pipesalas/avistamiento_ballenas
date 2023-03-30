@@ -48,9 +48,9 @@ def main():
         'Gray whale': 2440704
     }
 
-    col1, col2 = st.columns(2)
+    col1, col2 = st.columns([1,2])
     mes_seleccionado = col1.selectbox('Seleccionamos un mes', diccionario_meses.keys())
-    whale_species_selection = col2.selectbox('Select whale species', list(whale_species.keys()))
+    whale_species_selection = col1.selectbox('Select whale species', list(whale_species.keys()))
         
 
    
@@ -73,7 +73,7 @@ def main():
         En otras palabras, las áreas con altas concentraciones de clorofila pueden ser buenos lugares de alimentación para las ballenas, y monitorear los niveles de clorofila puede ayudarnos
         a comprender mejor el comportamiento y la distribución de las ballenas.''')
         
-        
+
     with col2:
         st.header('Temperatura')
         plot_temperature(gdf_temp, gdf_ballenas)
