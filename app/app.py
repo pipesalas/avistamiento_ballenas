@@ -192,9 +192,7 @@ def load_chlorophyll():
 
 @st.cache_data()
 def load_ruta() -> gpd.GeoDataFrame:
-    ruta = (gpd.read_file('app/data/Track_OOO.gpx', layer='tracks')).explode().reset_index(drop=True)
-    ruta = ruta.set_crs('epsg:4326')
-    ruta['text'] = ruta.name.apply(lambda x: f'ruta {x}')
+    ruta = gpd.read_file('app/data/ruta.geojson')
     return ruta
 
 
