@@ -24,14 +24,12 @@ def main():
     #st.('''Para visualizar las condiciones maritimas usamos google earth engine, sacamos la MEDIANA del mes, blabla''' )
     st.markdown('**Bienvenido a nuestra aplicación de avistamiento de observaciones de Ballenas en Chile**')
     
-
-
     
     lat_min, lat_max = -41, -39
     # cargamos datos
     df_avistamientos = load_datos_avistamientos()
     ruta = load_ruta()
-    chlorophyll = load_chlorophyll()
+    chlorophyll = load_chlorophyll(lat_min, lat_max)
     temperature = load_temperature(lat_min, lat_max)
 
     _, col_mapa, _ = st.columns([1, 5, 1])
@@ -45,11 +43,21 @@ def main():
     #     format="MM/DD/YY")
     
     with col_mapa:
-        especies = df_avistamientos['Especie'].unique()
-        for especie in especies:
-            st.toggle(f'{especie}', value=True, key=especie)
-        #I want a toggle for each species
-        species = st.multiselect('Especies', especies, default=especies)
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col1:
+            st.header('Filtro de fechas')
+            start_date = st.date_input('Fecha de avistamiento', min_value=dates[0], max_value=dates[-1], value=dates[0])
+        with col2:
+            st.header('Filtro de especies')
+            especies_seleccionadas = {}
+            especies = df_avistamientos['Especie'].unique()
+            for especie in especies:
+                especies_seleccionadas[especie] = st.toggle(especie, value=True, key=especie)
+        with col3:
+            st.header('Filtro de variables')
+            variable = st.radio('Seleccionamos una variable', ['Temperatura', 'Clorofila', 'Fitoplancton'], key='variable')
+            
+        
         with st.expander('Datos brutos', expanded=False):
             st.write(df_avistamientos.head())
             st.write(chlorophyll.head())
@@ -57,12 +65,19 @@ def main():
 
     
         st.header('Mapa de avistamientos')
-        plot_mapa(temperature, ruta, df_avistamientos)
+        if variable == 'Temperatura':
+            plot_mapa(temperature, ruta, df_avistamientos, 'temperature')
+        elif variable == 'Clorofila':
+            plot_mapa(chlorophyll, ruta, df_avistamientos, 'chlorophyll')
+        else:
+            plot_mapa(chlorophyll, ruta, df_avistamientos, 'phyc')
+        
 
 
 
 
-def plot_mapa(temperature, ruta, df_avistamientos):
+
+def plot_mapa(dataf, ruta, df_avistamientos, variable):
     color_range = [
         [65, 182, 196],
         [127, 205, 187],
@@ -78,8 +93,7 @@ def plot_mapa(temperature, ruta, df_avistamientos):
         [189, 0, 38],
         [128, 0, 38],
     ]
-    # Create bins for temperature
-    bins = np.linspace(temperature['temperature'].min(), temperature['temperature'].max(), len(color_range))
+    bins = np.linspace(dataf[variable].min(), dataf[variable].max(), len(color_range))
 
     def color_scale(val):
         for i, b in enumerate(bins):
@@ -87,14 +101,14 @@ def plot_mapa(temperature, ruta, df_avistamientos):
                 return color_range[i]
         return color_range[i]
 
-    temperature["fill_color"] = temperature["temperature"].apply(lambda row: color_scale(row))
+    dataf["fill_color"] = dataf[variable].apply(lambda row: color_scale(row))
 
     layers = [
         pdk.Layer(
             'PolygonLayer',
-            data=temperature.query('time<"2023-01-02"')[['longitude', 'latitude', 'geometry', 'temperature', 'fill_color']],
+            data=dataf.query('time<"2023-01-02"')[['longitude', 'latitude', 'geometry', variable, 'fill_color']],
             get_polygon='geometry.coordinates',
-            get_elevation='temperature',
+            get_elevation=variable,
             get_fill_color='fill_color',
             get_line_color=[128, 128, 128], 
             line_width_min_pixels=2,
@@ -106,9 +120,9 @@ def plot_mapa(temperature, ruta, df_avistamientos):
         ),
         pdk.Layer(
             'TextLayer',
-            data=temperature.query('time<"2023-01-02"')[['longitude', 'latitude', 'geometry', 'temperature_str', 'fill_color']],
+            data=dataf.query('time<"2023-01-02"')[['longitude', 'latitude', 'geometry', f'{variable}_str', 'fill_color']],
             get_position=[ 'longitude', 'latitude'],
-            get_text='temperature_str',
+            get_text=f'{variable}_str',
             get_color=[128,128,128],
             get_size=10,
             get_alignment_baseline="'bottom'",
@@ -180,10 +194,15 @@ def load_temperature(lat_min, lat_max):
 
 
 @st.cache_data()
-def load_chlorophyll():
+def load_chlorophyll(lat_min, lat_max):
     
     chlorophyll = pd.read_parquet('data/chlorophyll.parquet')
-    #chlorophyll = chlorophyll.pipe(crop_map, -40, -39, variable='chlorophyll').pipe(create_grid, grid_size=0.2)
+    chlorophyll = chlorophyll.pipe(crop_map, lat_min, lat_max, variable='chlorophyll').pipe(create_grid, grid_size=0.2)
+    chlorophyll['chlorophyll'] = chlorophyll['chlorophyll'].round(1)
+    chlorophyll['phyc'] = chlorophyll['phyc'].round(1)
+    chlorophyll['phyc_str'] = chlorophyll['phyc'].astype(str) + ' mmoles/m^3'
+    chlorophyll['chlorophyll_str'] = chlorophyll['chlorophyll'].astype(str) + ' g/m^3'
+
     return chlorophyll
 
 
