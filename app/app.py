@@ -181,13 +181,13 @@ def load_temperature(lat_min, lat_max):
     temperature['temperature_str'] = temperature['temperature'].astype(str) + ' °C'
     return temperature
 
+
 @st.cache_data()
 def load_chlorophyll():
     
     chlorophyll = pd.read_parquet('app/data/chlorophyll.parquet')
     #chlorophyll = chlorophyll.pipe(crop_map, -40, -39, variable='chlorophyll').pipe(create_grid, grid_size=0.2)
     return chlorophyll
-
 
 
 @st.cache_data()
