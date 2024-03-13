@@ -5,6 +5,7 @@ from shapely.geometry import MultiPoint
 import streamlit as st
 import pydeck as pdk
 from datetime import datetime
+import plotly.express as px
 
 
 def main():
@@ -34,13 +35,7 @@ def main():
 
     _, col_mapa, _ = st.columns([1, 5, 1])
     dates = [pd.to_datetime(date) for date in df_avistamientos['Fecha'].unique()]
-    # #add a slider for selecting dates based on the available dates
-    # start_time = st.slider(
-    #     "When do you start?",
-    #     min_value=dates[0],
-    #     max_value=dates[-1],
-    #     value=(dates[0], dates[-1]),
-    #     format="MM/DD/YY")
+   
     
     with col_mapa:
         col1, col2, col3 = st.columns([1, 1, 1])
@@ -58,10 +53,13 @@ def main():
             variable = st.radio('Seleccionamos una variable', ['Temperatura', 'Clorofila', 'Fitoplancton'], key='variable')
             
         
-        with st.expander('Datos brutos', expanded=False):
-            st.write(df_avistamientos.head())
-            st.write(chlorophyll.head())
-            st.write(temperature.head())
+        with st.expander('Conteo de especies', expanded=False):
+
+            
+            species_counts = df_avistamientos['Especie'].value_counts()
+            fig = px.bar(species_counts, y=species_counts.values, x=species_counts.index, labels={'x':'Species', 'y':'Count'})
+            st.plotly_chart(fig)
+            
 
     
         st.header('Mapa de avistamientos')
@@ -150,7 +148,7 @@ def plot_mapa(dataf, ruta, df_avistamientos, variable):
     ]
 
     view_state = pdk.ViewState(
-        latitude=-39.5,
+        latitude=-39.9,
         longitude=-73.8,
         zoom=10,
         pitch=50,
