@@ -8,6 +8,7 @@ import pydeck as pdk
 import os
 import requests
 from netCDF4 import Dataset
+from datetime import datetime
 
 
 def main():
@@ -36,9 +37,23 @@ def main():
     ruta = load_ruta()
     chlorophyll = load_chlorophyll()
     temperature = load_temperature(lat_min, lat_max)
-
+    st.write(df_avistamientos.Especie.unique())
     _, col_mapa, _ = st.columns([1, 5, 1])
+    dates = [pd.to_datetime(date) for date in df_avistamientos['Fecha'].unique()]
+    # #add a slider for selecting dates based on the available dates
+    # start_time = st.slider(
+    #     "When do you start?",
+    #     min_value=dates[0],
+    #     max_value=dates[-1],
+    #     value=(dates[0], dates[-1]),
+    #     format="MM/DD/YY")
+    
     with col_mapa:
+        especies = df_avistamientos['Especie'].unique()
+        for especie in especies:
+            st.toggle(f'{especie}', value=True, key=especie)
+        #I want a toggle for each species
+        species = st.multiselect('Especies', especies, default=especies)
         with st.expander('Datos brutos', expanded=False):
             st.write(df_avistamientos.head())
             st.write(chlorophyll.head())
@@ -88,10 +103,10 @@ def plot_mapa(temperature, ruta, df_avistamientos):
             get_line_color=[128, 128, 128], 
             line_width_min_pixels=2,
             opacity=0.5,
-            pickable=True,
+            pickable=False,
             stroked=False,
             auto_highlight=True,
-            tooltip={"text": "Temperatura: {temperature} °C"},
+            #tooltip={"text": "Temperatura: {temperature} °C"},
         ),
         pdk.Layer(
             'TextLayer',
@@ -127,7 +142,7 @@ def plot_mapa(temperature, ruta, df_avistamientos):
     view_state = pdk.ViewState(
         latitude=-39.5,
         longitude=-73.8,
-        zoom=8,
+        zoom=10,
         pitch=50,
     )
 
@@ -161,7 +176,7 @@ def create_grid(temperature, grid_size = 0.08):
 @st.cache_data()
 def load_temperature(lat_min, lat_max):
 
-    temperature = pd.read_pickle('app/data/temperature.pkl')
+    temperature = pd.read_parquet('app/data/temperature.parquet')
     temperature = temperature.pipe(crop_map, lat_min, lat_max).pipe(create_grid, grid_size=0.08)
     temperature['temperature'] = temperature['temperature'].round(1)
     temperature['temperature_str'] = temperature['temperature'].astype(str) + ' °C'
@@ -170,7 +185,7 @@ def load_temperature(lat_min, lat_max):
 @st.cache_data()
 def load_chlorophyll():
     
-    chlorophyll = pd.read_pickle('app/data/chlorophyll.pkl')
+    chlorophyll = pd.read_parquet('app/data/chlorophyll.parquet')
     #chlorophyll = chlorophyll.pipe(crop_map, -40, -39, variable='chlorophyll').pipe(create_grid, grid_size=0.2)
     return chlorophyll
 
