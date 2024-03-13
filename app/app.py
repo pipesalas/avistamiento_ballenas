@@ -36,7 +36,7 @@ def main():
     ruta = load_ruta()
     chlorophyll = load_chlorophyll()
     temperature = load_temperature(lat_min, lat_max)
-    st.write(df_avistamientos.Especie.unique())
+
     _, col_mapa, _ = st.columns([1, 5, 1])
     dates = [pd.to_datetime(date) for date in df_avistamientos['Fecha'].unique()]
     # #add a slider for selecting dates based on the available dates
