@@ -1,12 +1,9 @@
 import pandas as pd
 import numpy as np
 import geopandas as gpd
-from config import DATES
 from shapely.geometry import MultiPoint
 import streamlit as st
 import pydeck as pdk
-import os
-import requests
 from datetime import datetime
 
 
@@ -175,7 +172,7 @@ def create_grid(temperature, grid_size = 0.08):
 @st.cache_data()
 def load_temperature(lat_min, lat_max):
 
-    temperature = pd.read_parquet('app/data/temperature.parquet')
+    temperature = pd.read_parquet('data/temperature.parquet')
     temperature = temperature.pipe(crop_map, lat_min, lat_max).pipe(create_grid, grid_size=0.08)
     temperature['temperature'] = temperature['temperature'].round(1)
     temperature['temperature_str'] = temperature['temperature'].astype(str) + ' °C'
@@ -185,20 +182,20 @@ def load_temperature(lat_min, lat_max):
 @st.cache_data()
 def load_chlorophyll():
     
-    chlorophyll = pd.read_parquet('app/data/chlorophyll.parquet')
+    chlorophyll = pd.read_parquet('data/chlorophyll.parquet')
     #chlorophyll = chlorophyll.pipe(crop_map, -40, -39, variable='chlorophyll').pipe(create_grid, grid_size=0.2)
     return chlorophyll
 
 
 @st.cache_data()
 def load_ruta() -> gpd.GeoDataFrame:
-    ruta = gpd.read_file('app/data/ruta.geojson')
+    ruta = gpd.read_file('data/ruta.geojson')
     return ruta
 
 
 @st.cache_data()
 def load_datos_avistamientos():
-    df = pd.read_excel('app/data/datos_avistamientos.xlsx')
+    df = pd.read_excel('data/datos_avistamientos.xlsx')
     unique_species = df['Especie'].unique()
     colors = [[np.random.randint(0, 256), np.random.randint(0, 256), np.random.randint(0, 256)] for _ in range(len(unique_species))]
     species_color = dict(zip(unique_species, colors))
