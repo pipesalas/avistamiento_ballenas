@@ -62,13 +62,8 @@ def main():
 
             #add a time serie of the number of avistamientos
             df_number_avistamientos = df_avistamientos.groupby('Fecha').size().reset_index(name='counts')
-            fig = px.line(df_number_avistamientos, x='Fecha', y='counts', labels={'x':'Fecha', 'y':'Numero de avistamientos'})
-            fig.add_trace(go.Scatter(
-                x=df_number_avistamientos['Fecha'],
-                y=df_number_avistamientos['counts'],
-                mode='markers',
-                name='markers'
-            ))
+            fig = px.bar(df_number_avistamientos, x='Fecha', y='counts', labels={'x':'Fecha', 'y':'Numero de avistamientos'},
+                         title='Numero de avistamientos por fecha')
             st.plotly_chart(fig)
             
 
@@ -236,7 +231,9 @@ def load_datos_avistamientos():
     unique_species = df['Especie'].unique()
     colors = [[np.random.randint(0, 256), np.random.randint(0, 256), np.random.randint(0, 256)] for _ in range(len(unique_species))]
     species_color = dict(zip(unique_species, colors))
+    df = df.query('Fecha >= "2023-01-01"')
     df['color'] = df['Especie'].map(species_color)
+    
     return df
 
 
