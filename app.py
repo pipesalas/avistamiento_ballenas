@@ -33,18 +33,19 @@ def main():
     temperature = load_temperature(lat_min, lat_max)
 
     _, col_mapa, _ = st.columns([1, 5, 1])
-    dates = [pd.to_datetime(date) for date in df_avistamientos['Fecha'].unique()]
+    dates = [str(date).split('T')[0] for date in df_avistamientos['Fecha'].unique()]
    
     
     with col_mapa:
-        st.title('🐋 Monitoreo de mamiferos marinos :ocean:')
+        st.title('🐋 Monitor de mamiferos marinos :ocean:')
 
     
         st.markdown('**Bienvenido a nuestra aplicación de avistamiento de observaciones de Ballenas en Chile**')
         col1, col2, col3 = st.columns([1, 2, 1])
         with col1:
             st.header('Filtro de fechas')
-            start_date = st.date_input('Fecha de avistamiento', min_value=dates[0], max_value=dates[-1], value=dates[0])
+            #start_date = st.date_input('Fecha de avistamiento', min_value=dates[0], max_value=dates[-1], value=dates[0])
+            start_date = st.selectbox('Fecha de avistamiento', dates)
         with col2:
             st.header('Filtro de especies')
             especies_seleccionadas = {}
@@ -54,8 +55,8 @@ def main():
         with col3:
             st.header('Filtro de variables')
             variable = st.radio('Seleccionamos una variable', ['Temperatura', 'Clorofila', 'Fitoplancton'], key='variable')
-            
-        
+        filtro_especies = [especie for especie, seleccion in especies_seleccionadas.items() if seleccion]
+        df_avistamientos = df_avistamientos.query('Especie in @filtro_especies')
         with st.expander('Conteo de especies', expanded=True):
 
             
@@ -93,14 +94,27 @@ def main():
 
 def conteo_especie_tiempo(df_avistamientos):
     df_number_avistamientos = df_avistamientos.groupby('Fecha').size().reset_index(name='counts')
-    fig = px.bar(df_number_avistamientos, x='Fecha', y='counts', labels={'x':'Fecha', 'y':'Numero de avistamientos a lo largo del tiempo'},
-                         title='Numero de avistamientos por fecha')
+    fig = px.bar(df_number_avistamientos, 
+            x='Fecha', 
+            y='counts', 
+            labels={'x':'Fecha', 'y':'Numero de avistamientos a lo largo del tiempo'},
+                         title='Numero de avistamientos por fecha',
+                         width=800, height=400)
+    fig.update_yaxes(title_text='Conteo')
     st.plotly_chart(fig)
 
 
 def plot_conteo_especies(df_avistamientos):
     species_counts = df_avistamientos['Especie'].value_counts()
-    fig = px.bar(species_counts, y=species_counts.values, x=species_counts.index, labels={'x':'Species', 'y':'Count'}, title='Conteo de avistamientos por especie')
+    fig = px.bar(species_counts, 
+                 y=species_counts.values, 
+                 x=species_counts.index, 
+                 labels={'x':'Species', 'y':'Count'}, 
+                 title='Conteo de avistamientos por especie',
+                 width=800, height=400)
+    #update xaxis name
+    fig.update_xaxes(title_text='Especies')
+    fig.update_yaxes(title_text='Conteo')
     st.plotly_chart(fig)
 
 
