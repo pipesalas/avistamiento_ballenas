@@ -6,7 +6,7 @@ import streamlit as st
 import pydeck as pdk
 from datetime import datetime
 import plotly.express as px
-
+import plotly.graph_objects as go
 
 def main():
 
@@ -59,16 +59,27 @@ def main():
             species_counts = df_avistamientos['Especie'].value_counts()
             fig = px.bar(species_counts, y=species_counts.values, x=species_counts.index, labels={'x':'Species', 'y':'Count'})
             st.plotly_chart(fig)
+
+            #add a time serie of the number of avistamientos
+            df_number_avistamientos = df_avistamientos.groupby('Fecha').size().reset_index(name='counts')
+            fig = px.line(df_number_avistamientos, x='Fecha', y='counts', labels={'x':'Fecha', 'y':'Numero de avistamientos'})
+            fig.add_trace(go.Scatter(
+                x=df_number_avistamientos['Fecha'],
+                y=df_number_avistamientos['counts'],
+                mode='markers',
+                name='markers'
+            ))
+            st.plotly_chart(fig)
             
 
     
         st.header('Mapa de avistamientos')
         if variable == 'Temperatura':
-            plot_mapa(temperature, ruta, df_avistamientos, 'temperature')
+            plot_mapa(temperature.query('time==@start_date'), ruta, df_avistamientos.query('Fecha==@start_date'), 'temperature')
         elif variable == 'Clorofila':
-            plot_mapa(chlorophyll, ruta, df_avistamientos, 'chlorophyll')
+            plot_mapa(chlorophyll.query('time==@start_date'), ruta, df_avistamientos.query('Fecha==@start_date'), 'chlorophyll')
         else:
-            plot_mapa(chlorophyll, ruta, df_avistamientos, 'phyc')
+            plot_mapa(chlorophyll.query('time==@start_date'), ruta, df_avistamientos.query('Fecha==@start_date'), 'phyc')
         
 
 
@@ -104,7 +115,7 @@ def plot_mapa(dataf, ruta, df_avistamientos, variable):
     layers = [
         pdk.Layer(
             'PolygonLayer',
-            data=dataf.query('time<"2023-01-02"')[['longitude', 'latitude', 'geometry', variable, 'fill_color']],
+            data=dataf[['longitude', 'latitude', 'geometry', variable, 'fill_color']],
             get_polygon='geometry.coordinates',
             get_elevation=variable,
             get_fill_color='fill_color',
@@ -118,7 +129,7 @@ def plot_mapa(dataf, ruta, df_avistamientos, variable):
         ),
         pdk.Layer(
             'TextLayer',
-            data=dataf.query('time<"2023-01-02"')[['longitude', 'latitude', 'geometry', f'{variable}_str', 'fill_color']],
+            data=dataf[['longitude', 'latitude', 'geometry', f'{variable}_str', 'fill_color']],
             get_position=['longitude', 'latitude'],
             get_text=f'{variable}_str',
             get_color=[128,128,128],
