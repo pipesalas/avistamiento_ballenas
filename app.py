@@ -76,7 +76,8 @@ def main():
         else:
             plot_mapa(chlorophyll.query('time==@start_date'), ruta, df_avistamientos.query('Fecha==@start_date'), 'phyc')
         
-
+        if len(df_avistamientos.query('Fecha==@start_date')) == 0:
+            st.warning('No hay avistamientos en la fecha seleccionada')
 
 
 
@@ -167,6 +168,8 @@ def plot_mapa(dataf, ruta, df_avistamientos, variable):
         tooltip={"text": "Especie: {Especie}"}
     )
     st.pydeck_chart(deck)
+
+    
     
     
 def crop_map(df, lat_min, lat_max, variable='temperature', agg='mean'):
