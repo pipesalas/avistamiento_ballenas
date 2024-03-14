@@ -22,10 +22,7 @@ def main():
     }
     )
 
-    st.title('🐋 Monitoreo de mamiferos marinos :ocean:')
-
-    #st.('''Para visualizar las condiciones maritimas usamos google earth engine, sacamos la MEDIANA del mes, blabla''' )
-    st.markdown('**Bienvenido a nuestra aplicación de avistamiento de observaciones de Ballenas en Chile**')
+  
     
     
     lat_min, lat_max = -41, -39
@@ -40,6 +37,10 @@ def main():
    
     
     with col_mapa:
+        st.title('🐋 Monitoreo de mamiferos marinos :ocean:')
+
+    
+        st.markdown('**Bienvenido a nuestra aplicación de avistamiento de observaciones de Ballenas en Chile**')
         col1, col2, col3 = st.columns([1, 2, 1])
         with col1:
             st.header('Filtro de fechas')
@@ -55,7 +56,7 @@ def main():
             variable = st.radio('Seleccionamos una variable', ['Temperatura', 'Clorofila', 'Fitoplancton'], key='variable')
             
         
-        with st.expander('Conteo de especies', expanded=False):
+        with st.expander('Conteo de especies', expanded=True):
 
             
             plot_conteo_especies(df_avistamientos)
@@ -84,7 +85,7 @@ def main():
         cols_fotos = st.columns(num_cols_fotos)
         for i, file in enumerate(files):
             with cols_fotos[i%num_cols_fotos]:
-                st.image(files[i], width=300,)# caption=['Foto 1', 'Foto 2', 'Foto 3'])
+                st.image(files[i], width=300, caption=['Comentario foto, foto_id'])
 
 
 
