@@ -7,6 +7,8 @@ import pydeck as pdk
 from datetime import datetime
 import plotly.express as px
 import plotly.graph_objects as go
+import os
+
 
 def main():
 
@@ -20,7 +22,7 @@ def main():
     }
     )
 
-    st.title('🐋 Avistamiento de mamiferos marinos :ocean:')
+    st.title('🐋 Monitoreo de mamiferos marinos :ocean:')
 
     #st.('''Para visualizar las condiciones maritimas usamos google earth engine, sacamos la MEDIANA del mes, blabla''' )
     st.markdown('**Bienvenido a nuestra aplicación de avistamiento de observaciones de Ballenas en Chile**')
@@ -38,7 +40,7 @@ def main():
    
     
     with col_mapa:
-        col1, col2, col3 = st.columns([1, 1, 1])
+        col1, col2, col3 = st.columns([1, 2, 1])
         with col1:
             st.header('Filtro de fechas')
             start_date = st.date_input('Fecha de avistamiento', min_value=dates[0], max_value=dates[-1], value=dates[0])
@@ -56,15 +58,8 @@ def main():
         with st.expander('Conteo de especies', expanded=False):
 
             
-            species_counts = df_avistamientos['Especie'].value_counts()
-            fig = px.bar(species_counts, y=species_counts.values, x=species_counts.index, labels={'x':'Species', 'y':'Count'})
-            st.plotly_chart(fig)
-
-            #add a time serie of the number of avistamientos
-            df_number_avistamientos = df_avistamientos.groupby('Fecha').size().reset_index(name='counts')
-            fig = px.bar(df_number_avistamientos, x='Fecha', y='counts', labels={'x':'Fecha', 'y':'Numero de avistamientos'},
-                         title='Numero de avistamientos por fecha')
-            st.plotly_chart(fig)
+            plot_conteo_especies(df_avistamientos)
+            conteo_especie_tiempo(df_avistamientos)
             
 
     
@@ -78,6 +73,34 @@ def main():
         
         if len(df_avistamientos.query('Fecha==@start_date')) == 0:
             st.warning('No hay avistamientos en la fecha seleccionada')
+
+
+        # now sample 3 files from data/fotos
+        files = os.listdir('data/fotos')
+        files = [os.path.join('data/fotos', file) for file in files]
+        files = np.random.choice(files, 4)
+        st.header('Fotos de avistamientos')
+        num_cols_fotos = 3
+        cols_fotos = st.columns(num_cols_fotos)
+        for i, file in enumerate(files):
+            with cols_fotos[i%num_cols_fotos]:
+                st.image(files[i], width=300,)# caption=['Foto 1', 'Foto 2', 'Foto 3'])
+
+
+
+
+
+def conteo_especie_tiempo(df_avistamientos):
+    df_number_avistamientos = df_avistamientos.groupby('Fecha').size().reset_index(name='counts')
+    fig = px.bar(df_number_avistamientos, x='Fecha', y='counts', labels={'x':'Fecha', 'y':'Numero de avistamientos a lo largo del tiempo'},
+                         title='Numero de avistamientos por fecha')
+    st.plotly_chart(fig)
+
+
+def plot_conteo_especies(df_avistamientos):
+    species_counts = df_avistamientos['Especie'].value_counts()
+    fig = px.bar(species_counts, y=species_counts.values, x=species_counts.index, labels={'x':'Species', 'y':'Count'}, title='Conteo de avistamientos por especie')
+    st.plotly_chart(fig)
 
 
 
