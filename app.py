@@ -22,18 +22,13 @@ def main():
     }
     )
 
-  
-    
-    
     lat_min, lat_max = -41, -39
-    # cargamos datos
-    df_avistamientos = load_datos_avistamientos()
     ruta = load_ruta()
+    df_avistamientos = load_datos_avistamientos()
     chlorophyll = load_chlorophyll(lat_min, lat_max)
     temperature = load_temperature(lat_min, lat_max)
 
     _, col_mapa, _ = st.columns([1, 5, 1])
-    dates = [str(date).split('T')[0] for date in df_avistamientos['Fecha'].unique()]
    
     
     with col_mapa:
@@ -44,22 +39,23 @@ def main():
         col1, col2, col3 = st.columns([1, 2, 1])
         with col1:
             st.header('Filtro de fechas')
-            #start_date = st.date_input('Fecha de avistamiento', min_value=dates[0], max_value=dates[-1], value=dates[0])
+            dates = [str(date).split('T')[0] for date in df_avistamientos['Fecha'].unique()]
             start_date = st.selectbox('Fecha de avistamiento', dates)
+
         with col2:
             st.header('Filtro de especies')
             especies_seleccionadas = {}
             especies = df_avistamientos['Especie'].unique()
             for especie in especies:
                 especies_seleccionadas[especie] = st.toggle(especie, value=True, key=especie)
+            filtro_especies = [especie for especie, seleccion in especies_seleccionadas.items() if seleccion]
+            df_avistamientos = df_avistamientos.query('Especie in @filtro_especies')
+
         with col3:
             st.header('Filtro de variables')
             variable = st.radio('Seleccionamos una variable', ['Temperatura', 'Clorofila', 'Fitoplancton'], key='variable')
-        filtro_especies = [especie for especie, seleccion in especies_seleccionadas.items() if seleccion]
-        df_avistamientos = df_avistamientos.query('Especie in @filtro_especies')
+        
         with st.expander('Conteo de especies', expanded=True):
-
-            
             plot_conteo_especies(df_avistamientos)
             conteo_especie_tiempo(df_avistamientos)
             
@@ -76,17 +72,18 @@ def main():
         if len(df_avistamientos.query('Fecha==@start_date')) == 0:
             st.warning('No hay avistamientos en la fecha seleccionada')
 
-
-        # now sample 3 files from data/fotos
-        files = os.listdir('data/fotos')
-        files = [os.path.join('data/fotos', file) for file in files]
-        files = np.random.choice(files, 4)
         st.header('Fotos de avistamientos')
-        num_cols_fotos = 3
-        cols_fotos = st.columns(num_cols_fotos)
-        for i, file in enumerate(files):
-            with cols_fotos[i%num_cols_fotos]:
-                st.image(files[i], width=300, caption=['Comentario foto, foto_id'])
+        ploteamos_fotos()
+
+def ploteamos_fotos(num_cols_fotos=3):
+    files = os.listdir('data/fotos')
+    files = [os.path.join('data/fotos', file) for file in files]
+    n = np.random.randint(2, 7)
+    files = np.random.choice(files, n)
+    cols_fotos = st.columns(num_cols_fotos)
+    for i, file in enumerate(files):
+        with cols_fotos[i%num_cols_fotos]:
+            st.image(files[i], width=300, caption=['Comentario foto, foto_id'])
 
 
 
