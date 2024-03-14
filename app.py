@@ -119,7 +119,7 @@ def plot_mapa(dataf, ruta, df_avistamientos, variable):
         pdk.Layer(
             'TextLayer',
             data=dataf.query('time<"2023-01-02"')[['longitude', 'latitude', 'geometry', f'{variable}_str', 'fill_color']],
-            get_position=[ 'longitude', 'latitude'],
+            get_position=['longitude', 'latitude'],
             get_text=f'{variable}_str',
             get_color=[128,128,128],
             get_size=10,
@@ -163,10 +163,18 @@ def plot_mapa(dataf, ruta, df_avistamientos, variable):
     st.pydeck_chart(deck)
     
     
-def crop_map(df, lat_min, lat_max, variable='temperature'):
+def crop_map(df, lat_min, lat_max, variable='temperature', agg='mean'):
     min_depth = df.depth.min()
-    df = df.query(f'latitude >= {lat_min} and latitude <= {lat_max} and depth == @min_depth')
-    
+    df = df.query(f'latitude >= {lat_min} and latitude <= {lat_max}')
+    if variable == 'temperature':
+        temp_surface = df.query(f'depth == {min_depth}').copy().rename(columns={variable: 'surface_temperature'})
+        temp_surface['surface_temperature'] = temp_surface['surface_temperature'].round(1)
+        df = df.groupby(['time', 'latitude', 'longitude']).agg({variable: agg}).reset_index()
+        df = df.merge(temp_surface[['time', 'latitude', 'longitude', 'surface_temperature']], on=['time', 'latitude', 'longitude'], how='left')
+
+    elif variable == 'chlorophyll':
+        df = df.groupby(['time', 'latitude', 'longitude']).agg({variable: agg, 'phyc': agg}).reset_index()
+        
     df = df.dropna(how='any')
     return df
 
@@ -185,9 +193,10 @@ def create_grid(temperature, grid_size = 0.08):
 def load_temperature(lat_min, lat_max):
 
     temperature = pd.read_parquet('data/temperature.parquet')
-    temperature = temperature.pipe(crop_map, lat_min, lat_max).pipe(create_grid, grid_size=0.08)
+    temperature = temperature.pipe(crop_map, lat_min, lat_max, variable='temperature').pipe(create_grid, grid_size=0.08)
     temperature['temperature'] = temperature['temperature'].round(1)
     temperature['temperature_str'] = temperature['temperature'].astype(str) + ' °C'
+    temperature['surface_temperature_str'] = temperature['surface_temperature'].astype(str) + ' °C'
     return temperature
 
 
