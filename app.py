@@ -43,7 +43,7 @@ def main():
         col1, col2, col3 = st.columns(3)
         with col1:
             st.markdown('**Filtro de fechas**')
-            dates = [str(date).split('T')[0] for date in df_avistamientos['Fecha'].unique()]
+            dates = [str(date).split(' ')[0] for date in df_avistamientos['Fecha'].unique()]
             start_date = st.selectbox('Fecha de avistamiento', dates)
 
             st.markdown('**Filtro de variables**')
