@@ -24,7 +24,7 @@ def main():
 
     lat_min, lat_max = -41, -39
     ruta = load_ruta()
-    df_avistamientos = load_datos_avistamientos()
+    df_avistamientos, diccionario_color = load_datos_avistamientos()
     chlorophyll = load_chlorophyll(lat_min, lat_max)
     temperature = load_temperature(lat_min, lat_max)
 
@@ -34,8 +34,12 @@ def main():
     with col_mapa:
         st.title('🐋 Monitor de mamiferos marinos :ocean:')
 
-    
-        st.markdown('**Bienvenido a nuestra aplicación de avistamiento de observaciones de Ballenas en Chile**')
+        st.markdown('''
+                **Bienvenido a nuestra aplicación de avistamiento de observaciones de Ballenas en Chile**, somos [Vuelve al Oceano](http://www.vuelvealoceano.cl) y este
+                es nuestro monitor de mamiferos marinos.''')
+        st.markdown('''
+                    A continuación puedes seleccionar la fecha de avistamiento, la especie y la variable que quieres visualizar.
+                    Además, si existen avistamientos en la fecha seleccionada, se mostrarán en el mapa y si hay alguna foto disponible, se mostrará en la sección de fotos.''')
         col1, col2, col3 = st.columns([1, 2, 1])
         with col1:
             st.header('Filtro de fechas')
@@ -54,7 +58,7 @@ def main():
         with col3:
             st.header('Filtro de variables')
             variable = st.radio('Seleccionamos una variable', ['Temperatura', 'Clorofila', 'Fitoplancton'], key='variable')
-        
+            var = {'Temperatura': 'temperature', 'Clorofila': 'chlorophyll', 'Fitoplancton': 'phyc'}[variable]
         with st.expander('Conteo de especies', expanded=True):
             plot_conteo_especies(df_avistamientos)
             conteo_especie_tiempo(df_avistamientos)
@@ -62,18 +66,15 @@ def main():
 
     
         st.header('Mapa de avistamientos')
-        if variable == 'Temperatura':
-            plot_mapa(temperature.query('time==@start_date'), ruta, df_avistamientos.query('Fecha==@start_date'), 'temperature')
-        elif variable == 'Clorofila':
-            plot_mapa(chlorophyll.query('time==@start_date'), ruta, df_avistamientos.query('Fecha==@start_date'), 'chlorophyll')
-        else:
-            plot_mapa(chlorophyll.query('time==@start_date'), ruta, df_avistamientos.query('Fecha==@start_date'), 'phyc')
-        
+        df_mapa = {'temperature': temperature, 'chlorophyll': chlorophyll, 'phyc': chlorophyll}[var]
+        plot_mapa(df_mapa.query('time==@start_date'), ruta, df_avistamientos.query('Fecha==@start_date'), var, diccionario_color)
         if len(df_avistamientos.query('Fecha==@start_date')) == 0:
             st.warning('No hay avistamientos en la fecha seleccionada')
 
         st.header('Fotos de avistamientos')
         ploteamos_fotos()
+
+
 
 def ploteamos_fotos(num_cols_fotos=3):
     files = os.listdir('data/fotos')
@@ -84,8 +85,6 @@ def ploteamos_fotos(num_cols_fotos=3):
     for i, file in enumerate(files):
         with cols_fotos[i%num_cols_fotos]:
             st.image(files[i], width=300, caption=['Comentario foto, foto_id'])
-
-
 
 
 
@@ -115,24 +114,38 @@ def plot_conteo_especies(df_avistamientos):
     st.plotly_chart(fig)
 
 
+def plot_mapa(dataf, ruta, df_avistamientos, variable, diccionario_color):
+    color_range = {'temperature': [
+        [255, 255, 204],  # Light Yellow
+        [255, 237, 160],  # Lighter Yellow
+        [254, 217, 118],  # Light Orange
+        [254, 178, 76],   # Orange
+        [253, 141, 60],   # Darker Orange
+        [252, 78, 42],    # Dark Orange
+        [227, 26, 28],    # Light Red
+        [189, 0, 38],     # Red
+    ],
+    'chlorophyll': [
+        [237, 248, 229],  # Pale Green
+        [199, 233, 192],  # Lighter Green
+        [161, 217, 155],  # Light Green
+        [116, 196, 118],  # Green
+        [65, 171, 93],   # Darker Green
+        [35, 139, 69],   # Dark Green
+        [0, 109, 44],    # Deep Green
+        [0, 68, 27],     # Deepest Green
+    ],
+    'phyc': [
+        [237, 248, 229],  # Pale Green
+        [199, 233, 192],  # Lighter Green
+        [161, 217, 155],  # Light Green
+        [116, 196, 118],  # Green
+        [65, 171, 93],   # Darker Green
+        [35, 139, 69],   # Dark Green
+        [0, 109, 44],    # Deep Green
+        [0, 68, 27],     # Deepest Green
+    ]}[variable]
 
-
-def plot_mapa(dataf, ruta, df_avistamientos, variable):
-    color_range = [
-        [65, 182, 196],
-        [127, 205, 187],
-        [199, 233, 180],
-        [237, 248, 177],
-        [255, 255, 204],
-        [255, 237, 160],
-        [254, 217, 118],
-        [254, 178, 76],
-        [253, 141, 60],
-        [252, 78, 42],
-        [227, 26, 28],
-        [189, 0, 38],
-        [128, 0, 38],
-    ]
     bins = np.linspace(dataf[variable].min(), dataf[variable].max(), len(color_range))
 
     def color_scale(val):
@@ -179,10 +192,10 @@ def plot_mapa(dataf, ruta, df_avistamientos, variable):
         ),
         pdk.Layer(
             'ScatterplotLayer',
-            data=df_avistamientos[['lat', 'lon', 'Especie', 'color']].copy(),
+            data=df_avistamientos[['lat', 'lon', 'Especie', 'color', 'text', 'numero_individuos_log']].copy(),
             get_position=['lon', 'lat'],
             get_color='color',  
-            get_radius=200,
+            get_radius='200*numero_individuos_log',
             pickable=True,
             auto_highlight=True,
             #tooltip=,
@@ -200,7 +213,9 @@ def plot_mapa(dataf, ruta, df_avistamientos, variable):
         map_style=pdk.map_styles.LIGHT,
         initial_view_state=view_state,
         layers=layers,
-        tooltip={"text": "Especie: {Especie}"}
+        tooltip={
+            "text": "{text}"
+        }
     )
     st.pydeck_chart(deck)
 
@@ -271,8 +286,12 @@ def load_datos_avistamientos():
     species_color = dict(zip(unique_species, colors))
     df = df.query('Fecha >= "2023-01-01"')
     df['color'] = df['Especie'].map(species_color)
+    df.loc[:, 'numero_individuos_log'] = np.log(df['numero_individuos'] + 1)
+
+
+    df.loc[:, 'text'] = df.apply(lambda row: f"Especie: {row['Especie']}, \nNumero de individuos: {row['numero_individuos']}, \nObservaciones: {row['Observaciones']}" if pd.notnull(row['Observaciones']) else f"Especie: {row['Especie']}, \nNumero de individuos: {row['numero_individuos']}", axis=1)
     
-    return df
+    return df, species_color
 
 
 if __name__ == "__main__":
