@@ -40,25 +40,35 @@ def main():
         st.markdown('''
                     A continuación puedes seleccionar la fecha de avistamiento, la especie y la variable que quieres visualizar.
                     Además, si existen avistamientos en la fecha seleccionada, se mostrarán en el mapa y si hay alguna foto disponible, se mostrará en la sección de fotos.''')
-        col1, col2, col3 = st.columns([1, 2, 1])
+        col1, col2, col3 = st.columns(3)
         with col1:
-            st.header('Filtro de fechas')
+            st.markdown('**Filtro de fechas**')
             dates = [str(date).split('T')[0] for date in df_avistamientos['Fecha'].unique()]
             start_date = st.selectbox('Fecha de avistamiento', dates)
 
-        with col2:
-            st.header('Filtro de especies')
-            especies_seleccionadas = {}
-            especies = df_avistamientos['Especie'].unique()
-            for especie in especies:
-                especies_seleccionadas[especie] = st.toggle(especie, value=True, key=especie)
-            filtro_especies = [especie for especie, seleccion in especies_seleccionadas.items() if seleccion]
-            df_avistamientos = df_avistamientos.query('Especie in @filtro_especies')
-
-        with col3:
-            st.header('Filtro de variables')
+            st.markdown('**Filtro de variables**')
             variable = st.radio('Seleccionamos una variable', ['Temperatura', 'Clorofila', 'Fitoplancton'], key='variable')
             var = {'Temperatura': 'temperature', 'Clorofila': 'chlorophyll', 'Fitoplancton': 'phyc'}[variable]
+
+        with col2:
+            st.markdown('**Filtro de especies**')
+            especies_seleccionadas = {}
+            especies = df_avistamientos['Especie'].unique()
+
+            for especie in especies[:int(len(especies)/2+1)]:
+                especies_seleccionadas[especie] = st.toggle(especie, value=True, key=especie)
+
+        with col3:
+            #st.markdown('<span style="color: red;">text</span> ', unsafe_allow_html=True)
+            st.markdown('    ', unsafe_allow_html=True)
+            for especie in especies[int(len(especies)/2+1):]:
+                especies_seleccionadas[especie] = st.toggle(especie, value=True, key=especie)
+        
+        filtro_especies = [especie for especie, seleccion in especies_seleccionadas.items() if seleccion]
+        df_avistamientos = df_avistamientos.query('Especie in @filtro_especies')
+
+        
+            
         with st.expander('Conteo de especies', expanded=True):
             plot_conteo_especies(df_avistamientos)
             conteo_especie_tiempo(df_avistamientos)
