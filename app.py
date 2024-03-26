@@ -11,6 +11,8 @@ import os
 
 
 def main():
+    
+    
 
     st.set_page_config(
     page_title="Avistamiento mamíferos",
@@ -53,7 +55,10 @@ def main():
         with col2:
             st.markdown('**Filtro de especies**')
             especies_seleccionadas = {}
+            #lets order the Especies 
+
             especies = df_avistamientos['Especie'].unique()
+            especies.sort()
 
             for especie in especies[:int(len(especies)/2+1)]:
                 especies_seleccionadas[especie] = st.toggle(especie, value=True, key=especie)
@@ -66,6 +71,7 @@ def main():
         
         filtro_especies = [especie for especie, seleccion in especies_seleccionadas.items() if seleccion]
         df_avistamientos = df_avistamientos.query('Especie in @filtro_especies')
+
 
         
             
@@ -202,8 +208,8 @@ def plot_mapa(dataf, ruta, df_avistamientos, variable, diccionario_color):
         ),
         pdk.Layer(
             'ScatterplotLayer',
-            data=df_avistamientos[['lat', 'lon', 'Especie', 'color', 'text', 'numero_individuos_log']].copy(),
-            get_position=['lon', 'lat'],
+            data=df_avistamientos[['longitude', 'latitude', 'Especie', 'color', 'text', 'numero_individuos_log']].copy(),
+            get_position=['longitude', 'latitude'],
             get_color='color',  
             get_radius='200*numero_individuos_log',
             pickable=True,
@@ -213,9 +219,9 @@ def plot_mapa(dataf, ruta, df_avistamientos, variable, diccionario_color):
     ]
 
     view_state = pdk.ViewState(
-        latitude=-39.9,
-        longitude=-73.8,
-        zoom=10,
+        latitude=-39.92,
+        longitude=-73.7,
+        zoom=11,
         pitch=50,
     )
 
@@ -291,15 +297,15 @@ def load_ruta() -> gpd.GeoDataFrame:
 @st.cache_data()
 def load_datos_avistamientos():
     df = pd.read_excel('data/datos_avistamientos.xlsx')
+    df['Fecha'] = pd.to_datetime(df['Fecha'], errors='coerce')
     unique_species = df['Especie'].unique()
     colors = [[np.random.randint(0, 256), np.random.randint(0, 256), np.random.randint(0, 256)] for _ in range(len(unique_species))]
     species_color = dict(zip(unique_species, colors))
     df = df.query('Fecha >= "2023-01-01"')
     df['color'] = df['Especie'].map(species_color)
-    df.loc[:, 'numero_individuos_log'] = np.log(df['numero_individuos'] + 1)
+    df.loc[:, 'numero_individuos_log'] = np.log(df['individuos'] + 1)
 
-
-    df.loc[:, 'text'] = df.apply(lambda row: f"Especie: {row['Especie']}, \nNumero de individuos: {row['numero_individuos']}, \nObservaciones: {row['Observaciones']}" if pd.notnull(row['Observaciones']) else f"Especie: {row['Especie']}, \nNumero de individuos: {row['numero_individuos']}", axis=1)
+    df.loc[:, 'text'] = df.apply(lambda row: f"Especie: {row['Especie']}, \nNumero de individuos: {row['individuos']}, \nObservaciones: {row['Observaciones']}" if pd.notnull(row['Observaciones']) else f"Especie: {row['Especie']}, \nNumero de individuos: {row['individuos']}", axis=1)
     
     return df, species_color
 
