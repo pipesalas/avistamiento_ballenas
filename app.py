@@ -128,7 +128,7 @@ def ploteamos_fotos(start_date):
                                 img=f"https://github.com/pipesalas/avistamiento_ballenas/blob/main/{file}?raw=true",
                             ))
         
-        carousel(items=test_items, width=1, height=3000)
+        carousel(items=test_items, width=1, height=1000)
 
 
 
