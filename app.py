@@ -8,6 +8,8 @@ from datetime import datetime
 import plotly.express as px
 import plotly.graph_objects as go
 import os
+from streamlit_carousel import carousel
+
 
 
 def main():
@@ -15,7 +17,7 @@ def main():
     
 
     st.set_page_config(
-    page_title="Avistamiento mamíferos",
+    page_title="Avistamiento mamíferos marinos",
     page_icon="🌊",
     layout="wide",
     menu_items={
@@ -87,20 +89,57 @@ def main():
         if len(df_avistamientos.query('Fecha==@start_date')) == 0:
             st.warning('No hay avistamientos en la fecha seleccionada')
 
-        st.header('Fotos de avistamientos')
-        ploteamos_fotos()
+    
+        ploteamos_fotos(start_date)
 
 
+        test_items = [
+        dict(
+            title="Slide 1",
+            text="A tree in the savannah",
+            interval=None,
+            img="https://github.com/pipesalas/avistamiento_ballenas/blob/main/data/fotos/alderon 06:01:2023.jpg",
+        ),
+        dict(
+            title="Slide 2",
+            text="A wooden bridge in a forest in Autumn",
+            img="https://img.freepik.com/free-photo/beautiful-wooden-pathway-going-breathtaking-colorful-trees-forest_181624-5840.jpg?w=1380&t=st=1688825780~exp=1688826380~hmac=dbaa75d8743e501f20f0e820fa77f9e377ec5d558d06635bd3f1f08443bdb2c1",
+        ),
+        dict(
+            title="Slide 3",
+            text="A distant mountain chain preceded by a sea",
+            img="https://img.freepik.com/free-photo/aerial-beautiful-shot-seashore-with-hills-background-sunset_181624-24143.jpg?w=1380&t=st=1688825798~exp=1688826398~hmac=f623f88d5ece83600dac7e6af29a0230d06619f7305745db387481a4bb5874a0",
+        ),
+    ]
 
-def ploteamos_fotos(num_cols_fotos=3):
+    carousel(items=test_items, width=1)
+
+def get_correct_chilean_date(date):
+    date = pd.to_datetime(date)
+    chilean_date = ''
+    if date.day < 10:
+        chilean_date += f'0{date.day}:'
+    else:
+        chilean_date += f'{date.day}:'
+    if date.month < 10:
+        chilean_date += f'0{date.month}:{date.year}'
+    else:
+        chilean_date += f'{date.month}:{date.year}'
+    return chilean_date
+
+
+def ploteamos_fotos(start_date):
+    chilean_date = get_correct_chilean_date(start_date)
     files = os.listdir('data/fotos')
     files = [os.path.join('data/fotos', file) for file in files]
-    n = np.random.randint(2, 7)
-    files = np.random.choice(files, n)
-    cols_fotos = st.columns(num_cols_fotos)
-    for i, file in enumerate(files):
-        with cols_fotos[i%num_cols_fotos]:
-            st.image(files[i], width=300, caption=['Comentario foto, foto_id'])
+    fotos_day = [file for file in files if chilean_date in file]
+    if len(fotos_day) == 0:
+        st.warning('No hay fotos en la fecha seleccionada')
+    else:
+        st.header('Fotos de avistamientos')
+        for i, file in enumerate(files):
+            if chilean_date in file:
+                st.image(files[i], width=300, caption=[f'{files[i]}'])
 
 
 
