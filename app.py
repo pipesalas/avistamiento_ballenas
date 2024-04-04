@@ -99,13 +99,13 @@ def get_correct_chilean_date(date):
     date = pd.to_datetime(date)
     chilean_date = ''
     if date.day < 10:
-        chilean_date += f'0{date.day}:'
+        chilean_date += f'0{date.day}_'
     else:
-        chilean_date += f'{date.day}:'
+        chilean_date += f'{date.day}_'
     if date.month < 10:
-        chilean_date += f'0{date.month}:{date.year}'
+        chilean_date += f'0{date.month}_{date.year}'
     else:
-        chilean_date += f'{date.month}:{date.year}'
+        chilean_date += f'{date.month}_{date.year}'
     return chilean_date
 
 
@@ -120,15 +120,15 @@ def ploteamos_fotos(start_date):
         st.header('Fotos de avistamientos')
         test_items = []
         for i, file in enumerate(files):
-            st.write(f"https://github.com/pipesalas/avistamiento_ballenas/blob/main/data/fotos/{file}.jpg?raw=true")
+            st.write(f"https://github.com/pipesalas/avistamiento_ballenas/blob/main/{file}?raw=true")
             test_items.append(dict(
                                 title=f"{file}",
                                 text=f"{file}",
                                 interval=None,
-                                img=f"https://github.com/pipesalas/avistamiento_ballenas/blob/main/data/fotos/{file}.jpg?raw=true",
+                                img=f"https://github.com/pipesalas/avistamiento_ballenas/blob/main/{file}?raw=true",
                             ))
         
-    carousel(items=test_items, width=1, height=3000)
+        carousel(items=test_items, width=1, height=3000)
 
 
 
