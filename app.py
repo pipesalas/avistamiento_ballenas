@@ -93,26 +93,7 @@ def main():
         ploteamos_fotos(start_date)
 
 
-        test_items = [
-        dict(
-            title="Slide 1",
-            text="A tree in the savannah",
-            interval=None,
-            img="https://github.com/pipesalas/avistamiento_ballenas/blob/main/data/fotos/alderon 06:01:2023.jpg",
-        ),
-        dict(
-            title="Slide 2",
-            text="A wooden bridge in a forest in Autumn",
-            img="https://img.freepik.com/free-photo/beautiful-wooden-pathway-going-breathtaking-colorful-trees-forest_181624-5840.jpg?w=1380&t=st=1688825780~exp=1688826380~hmac=dbaa75d8743e501f20f0e820fa77f9e377ec5d558d06635bd3f1f08443bdb2c1",
-        ),
-        dict(
-            title="Slide 3",
-            text="A distant mountain chain preceded by a sea",
-            img="https://img.freepik.com/free-photo/aerial-beautiful-shot-seashore-with-hills-background-sunset_181624-24143.jpg?w=1380&t=st=1688825798~exp=1688826398~hmac=f623f88d5ece83600dac7e6af29a0230d06619f7305745db387481a4bb5874a0",
-        ),
-    ]
-
-    carousel(items=test_items, width=1)
+        
 
 def get_correct_chilean_date(date):
     date = pd.to_datetime(date)
@@ -137,9 +118,17 @@ def ploteamos_fotos(start_date):
         st.warning('No hay fotos en la fecha seleccionada')
     else:
         st.header('Fotos de avistamientos')
+        test_items = []
         for i, file in enumerate(files):
-            if chilean_date in file:
-                st.image(files[i], width=300, caption=[f'{files[i]}'])
+            st.write(f"https://github.com/pipesalas/avistamiento_ballenas/blob/main/data/fotos/{file}.jpg?raw=true")
+            test_items.append(dict(
+                                title=f"{file}",
+                                text=f"{file}",
+                                interval=None,
+                                img=f"https://github.com/pipesalas/avistamiento_ballenas/blob/main/data/fotos/{file}.jpg?raw=true",
+                            ))
+        
+    carousel(items=test_items, width=1, height=3000)
 
 
 
