@@ -119,7 +119,7 @@ def ploteamos_fotos(start_date):
     else:
         st.header('Fotos de avistamientos')
         test_items = []
-        for i, file in enumerate(files):
+        for file in fotos_day:
             #st.write(f"https://github.com/pipesalas/avistamiento_ballenas/blob/main/{file}?raw=true")
             test_items.append(dict(
                                 title=f"",
