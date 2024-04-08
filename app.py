@@ -115,8 +115,8 @@ def conteo_especie_tiempo(df_avistamientos, width=800, height=400):
     fig = px.bar(df_number_avistamientos, 
             x='Fecha', 
             y='counts', 
-            labels={'x':'Fecha', 'y':'Numero de avistamientos a lo largo del tiempo'},
-                         title='Numero de avistamientos por fecha',
+            labels={'x':'Fecha', 'y':'Número de avistamientos a lo largo del tiempo'},
+                         title='Número de avistamientos por fecha',
                          width=width, height=height)
     fig.update_yaxes(title_text='Conteo')
     st.plotly_chart(fig)
