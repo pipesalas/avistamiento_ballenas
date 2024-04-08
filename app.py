@@ -98,10 +98,9 @@ def ploteamos_fotos(start_date):
         st.header('Fotos de avistamientos')
         test_items = []
         for file in fotos_day:
-            #st.write(f"https://github.com/pipesalas/avistamiento_ballenas/blob/main/{file}?raw=true")
             test_items.append(dict(
-                                title=f"Titulo opcional",
-                                text=f"Buena los cabros",
+                                title=f"",
+                                text=f"",
                                 interval=None,
                                 img=f"https://github.com/pipesalas/avistamiento_ballenas/blob/main/{file}?raw=true",
                             ))
