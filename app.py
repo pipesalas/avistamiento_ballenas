@@ -9,7 +9,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import os
 from streamlit_carousel import carousel
-
+import PIL.Image as Image
 
 def main():
 
@@ -33,14 +33,22 @@ def main():
    
     
     with col_mapa:
-        st.title('🐋 Monitor de mamiferos marinos :ocean:')
+        col_logo, col_title = st.columns([1, 4])
+        with col_logo:
+            image = Image.open('data/logo_vuelvealoceano.png')
+            st.image(image, width=200)
+        col_title.title('Monitoreo de mamíferos marinos en las localidades de Huiro y Chaihuin')
+        col_title.caption('Proyecto financiado por TNC Chile y GORE Los Ríos ')
 
-        st.markdown('''
-                **Bienvenido a nuestra aplicación de avistamiento de observaciones de Ballenas en Chile**, somos [Vuelve al Oceano](http://www.vuelvealoceano.cl) y este
-                es nuestro monitor de mamiferos marinos.''')
-        st.markdown('''
-                    A continuación puedes seleccionar la fecha de avistamiento, la especie y la variable que quieres visualizar.
-                    Además, si existen avistamientos en la fecha seleccionada, se mostrarán en el mapa y si hay alguna foto disponible, se mostrará en la sección de fotos.''')
+        st.markdown('''El objetivo de este proyecto es conocer qué especies de a mamíferos marinos transitan por el área de estudio (Huiro y Chaihuin, comuna de Corral, Los Ríos, Chile) y qué
+                     comportamientos tienen en la zona. ¿Acaso se alimentan?, ¿descansan?, ¿se reproducen ? Son preguntas que intentamos responder con este monitoreo, con el objetivo de recopilar información y
+                     proponer medidas de protección para estos animales.
+
+En esta aplicación podrás ver las observaciones que se han realizado durante el proyecto de investigación que llevamos realizando. Algunas de las observaciones se han realizado durante
+navegaciones de monitoreo con un equipo de voluntari@s, y otras observaciones se han realizado desde tierra vecinas y vecinos de las localidades a través de un chat de whatsapp
+que creamos con este fin. Agradecemos a cada persona que observa el mar y comparte sus avistamientos. 
+
+A continuación puedes seleccionar la fecha y el factor ambiental que quieras visualizar. Además, si existen fotos de ese día se mostrarán en la sección de fotos.''')
         col1, col2 = st.columns([1, 4])
         with col1:
             st.markdown('   ')
@@ -129,8 +137,9 @@ def plot_conteo_especies(df_avistamientos, width=800, height=400):
                  #y=species_counts.values[0], 
                  #x=species_counts.index, 
                  labels={'x':'Species', 'y':'Count'}, 
-                 title='Conteo de avistamientos por especie',
+                 title='Número de avistamientos por especie',
                  width=width, height=height)
+    fig.update_layout(showlegend=False)
     #update xaxis name
     fig.update_xaxes(title_text='Especies')
     fig.update_yaxes(title_text='Conteo')
