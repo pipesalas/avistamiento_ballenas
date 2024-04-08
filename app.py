@@ -11,10 +11,7 @@ import os
 from streamlit_carousel import carousel
 
 
-
 def main():
-    
-    
 
     st.set_page_config(
     page_title="Avistamiento mamíferos marinos",
@@ -32,7 +29,7 @@ def main():
     chlorophyll = load_chlorophyll(lat_min, lat_max)
     temperature = load_temperature(lat_min, lat_max)
 
-    _, col_mapa, _ = st.columns([1, 5, 1])
+    _, col_mapa, _ = st.columns([1, 10, 1])
    
     
     with col_mapa:
@@ -44,8 +41,9 @@ def main():
         st.markdown('''
                     A continuación puedes seleccionar la fecha de avistamiento, la especie y la variable que quieres visualizar.
                     Además, si existen avistamientos en la fecha seleccionada, se mostrarán en el mapa y si hay alguna foto disponible, se mostrará en la sección de fotos.''')
-        col1, col2, col3 = st.columns(3)
+        col1, col2 = st.columns([1, 4])
         with col1:
+            st.markdown('   ')
             st.markdown('**Filtro de fechas**')
             dates = [str(date).split(' ')[0] for date in df_avistamientos['Fecha'].unique()]
             start_date = st.selectbox('Fecha de avistamiento', dates)
@@ -55,31 +53,11 @@ def main():
             var = {'Temperatura': 'temperature', 'Clorofila': 'chlorophyll', 'Fitoplancton': 'phyc'}[variable]
 
         with col2:
-            st.markdown('**Filtro de especies**')
-            especies_seleccionadas = {}
-            #lets order the Especies 
-
-            especies = df_avistamientos['Especie'].unique()
-            especies.sort()
-
-            for especie in especies[:int(len(especies)/2+1)]:
-                especies_seleccionadas[especie] = st.toggle(especie, value=True, key=especie)
-
-        with col3:
-            #st.markdown('<span style="color: red;">text</span> ', unsafe_allow_html=True)
-            st.markdown('    ', unsafe_allow_html=True)
-            for especie in especies[int(len(especies)/2+1):]:
-                especies_seleccionadas[especie] = st.toggle(especie, value=True, key=especie)
-        
-        filtro_especies = [especie for especie, seleccion in especies_seleccionadas.items() if seleccion]
-        df_avistamientos = df_avistamientos.query('Especie in @filtro_especies')
-
-
-        
-            
-        with st.expander('Conteo de especies', expanded=True):
-            plot_conteo_especies(df_avistamientos)
-            conteo_especie_tiempo(df_avistamientos)
+            tab1, tab2 = st.tabs(['Conteo de especies', 'Conteo por fecha'])
+            with tab1:
+                plot_conteo_especies(df_avistamientos)
+            with tab2:
+                conteo_especie_tiempo(df_avistamientos)
             
 
     
@@ -128,30 +106,32 @@ def ploteamos_fotos(start_date):
                                 img=f"https://github.com/pipesalas/avistamiento_ballenas/blob/main/{file}?raw=true",
                             ))
         
-        carousel(items=test_items, width=1, height=1000)
+        carousel(items=test_items, width=1, height=2000)
 
 
 
-def conteo_especie_tiempo(df_avistamientos):
+def conteo_especie_tiempo(df_avistamientos, width=800, height=400):
     df_number_avistamientos = df_avistamientos.groupby('Fecha').size().reset_index(name='counts')
     fig = px.bar(df_number_avistamientos, 
             x='Fecha', 
             y='counts', 
             labels={'x':'Fecha', 'y':'Numero de avistamientos a lo largo del tiempo'},
                          title='Numero de avistamientos por fecha',
-                         width=800, height=400)
+                         width=width, height=height)
     fig.update_yaxes(title_text='Conteo')
     st.plotly_chart(fig)
+    
 
-
-def plot_conteo_especies(df_avistamientos):
-    species_counts = df_avistamientos['Especie'].value_counts()
+def plot_conteo_especies(df_avistamientos, width=800, height=400):
+    species_counts = df_avistamientos['Especie'].value_counts().reset_index()
+    species_counts.loc[:, 'index'] = species_counts['index'].apply(lambda x: x.split(' (')[0])
+    species_counts.set_index('index', inplace=True)
     fig = px.bar(species_counts, 
-                 y=species_counts.values, 
+                 y=species_counts.Especie, 
                  x=species_counts.index, 
                  labels={'x':'Species', 'y':'Count'}, 
                  title='Conteo de avistamientos por especie',
-                 width=800, height=400)
+                 width=width, height=height)
     #update xaxis name
     fig.update_xaxes(title_text='Especies')
     fig.update_yaxes(title_text='Conteo')
