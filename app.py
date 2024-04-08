@@ -126,7 +126,6 @@ def plot_conteo_especies(df_avistamientos, width=800, height=400):
     df_toplot = df_avistamientos.copy()
     df_toplot['Especie'] = df_toplot['Especie'].apply(lambda x: x.split(' (')[0])
     species_counts = df_toplot['Especie'].value_counts()
-    st.write(species_counts)
     fig = px.bar(species_counts, 
                  #y=species_counts.values[0], 
                  #x=species_counts.index, 
