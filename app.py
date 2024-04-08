@@ -123,12 +123,13 @@ def conteo_especie_tiempo(df_avistamientos, width=800, height=400):
     
 
 def plot_conteo_especies(df_avistamientos, width=800, height=400):
-    species_counts = df_avistamientos['Especie'].value_counts().reset_index()
-    species_counts.loc[:, 'index'] = species_counts['index'].apply(lambda x: x.split(' (')[0])
-    species_counts.set_index('index', inplace=True)
+    df_toplot = df_avistamientos.copy()
+    df_toplot['Especie'] = df_toplot['Especie'].apply(lambda x: x.split(' (')[0])
+    species_counts = df_toplot['Especie'].value_counts()
+    st.write(species_counts)
     fig = px.bar(species_counts, 
-                 y=species_counts.Especie, 
-                 x=species_counts.index, 
+                 #y=species_counts.values[0], 
+                 #x=species_counts.index, 
                  labels={'x':'Species', 'y':'Count'}, 
                  title='Conteo de avistamientos por especie',
                  width=width, height=height)
