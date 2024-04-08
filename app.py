@@ -36,7 +36,7 @@ def main():
         col_logo, col_title = st.columns([1, 4])
         with col_logo:
             image = Image.open('data/logo_vuelvealoceano.png')
-            st.image(image, width=200)
+            st.image(image, use_column_width=True,)
         col_title.title('Monitoreo de mamíferos marinos en las localidades de Huiro y Chaihuin')
         col_title.caption('Proyecto financiado por TNC Chile y GORE Los Ríos ')
 
