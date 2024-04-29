@@ -10,6 +10,10 @@ import plotly.graph_objects as go
 import os
 from streamlit_carousel import carousel
 import PIL.Image as Image
+from config import zona_1, zona_2, zona_3, zona_4
+from shapely.geometry import Polygon, LineString
+
+
 
 def main():
 
@@ -26,9 +30,11 @@ def main():
     lat_min, lat_max = -41, -39
     ruta = load_ruta()
     df_avistamientos, diccionario_color = load_datos_avistamientos()
+    df_conteo_directo = load_datos_avistamientos_orilla()    
+    
     chlorophyll = load_chlorophyll(lat_min, lat_max)
     temperature = load_temperature(lat_min, lat_max)
-
+    
     _, col_mapa, _ = st.columns([1, 10, 1])
    
     
@@ -41,11 +47,11 @@ def main():
         col_title.caption('Proyecto financiado por TNC Chile y GORE Los Ríos ')
 
         st.markdown('''El objetivo de este proyecto es conocer qué especies de a mamíferos marinos transitan por el área de estudio (Huiro y Chaihuin, comuna de Corral, Los Ríos, Chile) y qué
-                     comportamientos tienen en la zona. ¿Acaso se alimentan?, ¿descansan?, ¿se reproducen ? Son preguntas que intentamos responder con este monitoreo, con el objetivo de recopilar información y
+                     comportamientos tienen en la zona. ¿Acaso se alimentan?, ¿descansan?, ¿se reproducen?. Son preguntas que intentamos responder con este monitoreo, con el objetivo de recopilar información y
                      proponer medidas de protección para estos animales.
 
 En esta aplicación podrás ver las observaciones que se han realizado durante el proyecto de investigación que llevamos realizando. Algunas de las observaciones se han realizado durante
-navegaciones de monitoreo con un equipo de voluntari@s, y otras observaciones se han realizado desde tierra vecinas y vecinos de las localidades a través de un chat de whatsapp
+navegaciones de monitoreo con un equipo de voluntari@s, y otras observaciones han realizado desde tierra vecinas y vecinos de las localidades a través de un chat de whatsapp
 que creamos con este fin. Agradecemos a cada persona que observa el mar y comparte sus avistamientos. 
 
 A continuación puedes seleccionar la fecha y el factor ambiental que quieras visualizar. Además, si existen fotos de ese día se mostrarán en la sección de fotos.''')
@@ -53,8 +59,10 @@ A continuación puedes seleccionar la fecha y el factor ambiental que quieras vi
         with col1:
             st.markdown('   ')
             st.markdown('**Filtro de fechas**')
-            dates = [str(date).split(' ')[0] for date in df_avistamientos['Fecha'].unique()]
-            start_date = st.selectbox('Fecha de avistamiento', dates)
+            total_dates = list(df_avistamientos['Fecha'].unique()) + list(df_conteo_directo['Fecha'].unique())
+            total_dates.sort()
+            dates = [str(date).split(' ')[0] for date in total_dates]
+            start_date = st.selectbox('Fecha de avistamiento', dates, index=12)
 
             st.markdown('**Filtro de variables**')
             variable = st.radio('Seleccionamos una variable', ['Temperatura', 'Clorofila', 'Fitoplancton'], key='variable')
@@ -69,17 +77,24 @@ A continuación puedes seleccionar la fecha y el factor ambiental que quieras vi
             
 
     
-        st.header('Mapa de avistamientos')
-        df_mapa = {'temperature': temperature, 'chlorophyll': chlorophyll, 'phyc': chlorophyll}[var]
-        plot_mapa(df_mapa.query('time==@start_date'), ruta, df_avistamientos.query('Fecha==@start_date'), var, diccionario_color)
-        if len(df_avistamientos.query('Fecha==@start_date')) == 0:
-            st.warning('No hay avistamientos en la fecha seleccionada')
+        st.header('Mapas de avistamientos')
+        tab_barco, tab_orilla = st.tabs(['Avistamientos desde barco', 'Avistamientos desde orilla'])
+        with tab_orilla:
+            if len(df_conteo_directo.query('Fecha==@start_date')) == 0:
+                st.warning('No hay avistamientos en la fecha seleccionada')
+            else:
+                plot_conteo_directo(df_conteo_directo, start_date)
+        with tab_barco:
+            df_mapa = {'temperature': temperature, 'chlorophyll': chlorophyll, 'phyc': chlorophyll}[var]
+            if len(df_avistamientos.query('Fecha==@start_date')) == 0:
+                st.warning('No hay avistamientos en la fecha seleccionada')
+            else:
+                plot_mapa(df_mapa.query('time==@start_date'), ruta, df_avistamientos.query('Fecha==@start_date'), var, diccionario_color)
 
     
         ploteamos_fotos(start_date)
 
 
-        
 
 def get_correct_chilean_date(date):
     date = pd.to_datetime(date)
@@ -251,6 +266,49 @@ def plot_mapa(dataf, ruta, df_avistamientos, variable, diccionario_color):
     )
     st.pydeck_chart(deck)
 
+
+def plot_conteo_directo(df_conteo_directo, fecha, width=800, height=400):
+    
+    textos = df_conteo_directo.groupby(['Fecha'])['text'].apply(lambda x: ', '.join(x)).reset_index()
+    df_conteo_directo = (df_conteo_directo
+                         .query('Fecha == @fecha')
+                         .merge(textos.rename({'text': 'texto_completo'}, axis=1), on='Fecha', how='left'))
+    df_toplot = df_conteo_directo.drop_duplicates(subset=['Fecha'])
+    
+    layers = [
+        pdk.Layer(
+            'PolygonLayer',
+            data=df_toplot[['geometry', 'color', 'Numero', 'texto_completo']],
+            get_polygon='geometry.coordinates',
+            #get_elevation='Numero',
+            get_fill_color='color',
+            #get_line_color=[128, 128, 128], 
+            #line_width_min_pixels=2,
+            opacity=0.5,
+            pickable=True,
+            #stroked=False,
+            #auto_highlight=True,
+            
+        ),
+    ]
+
+    view_state = pdk.ViewState(
+        latitude=-39.92,
+        longitude=-73.7,
+        zoom=11,
+        pitch=50,
+    )
+
+    deck = pdk.Deck(
+        map_style=pdk.map_styles.LIGHT,
+        initial_view_state=view_state,
+        layers=layers,
+        tooltip={
+            "text": "{texto_completo}"
+        }
+    )
+    st.pydeck_chart(deck)
+
     
     
     
@@ -324,6 +382,29 @@ def load_datos_avistamientos():
     df.loc[:, 'text'] = df.apply(lambda row: f"Especie: {row['Especie']}, \nNumero de individuos: {row['individuos']}, \nObservaciones: {row['Observaciones']}" if pd.notnull(row['Observaciones']) else f"Especie: {row['Especie']}, \nNumero de individuos: {row['individuos']}", axis=1)
     
     return df, species_color
+
+
+@st.cache_data()
+def load_datos_avistamientos_orilla():
+    df = pd.read_excel('data/Planilla conteo directo .xlsx', skiprows=1)
+    #df['Fecha'] = pd.to_datetime(df['Fecha'], errors='coerce')
+    zonas = {1: Polygon(zona_1['coordinates'][0]), 2: Polygon(zona_2['coordinates'][0]), 3: Polygon(zona_3['coordinates'][0]), 4: Polygon(zona_4['coordinates'][0])}
+    df.columns = [col.strip() for col in df.columns]
+    df['color'] = df['Subzona'].map({
+                                    1: [255, 255, 0], 
+                                    2: [255, 0, 0], 
+                                    3: [0, 0, 255], 
+                                    4: [0, 128, 0]})
+    
+    df['geometry'] = df['Subzona'].map(zonas)
+    df = gpd.GeoDataFrame(df, geometry='geometry')
+    df['Especie_short'] = df['Especie'].apply(lambda x: x.split(' (')[0])
+    df['text'] = df.apply(lambda row: f"- {row['Especie_short']}: ({row['Numero']} ejemplares)  {row['Observaciones']}", axis=1)
+
+    return df
+
+
+
 
 
 if __name__ == "__main__":
