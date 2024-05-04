@@ -112,7 +112,7 @@ A continuación puedes seleccionar la fecha y el factor ambiental que quieras vi
                 total_dates = list(df_conteo_directo['Fecha'].unique())
                 total_dates.sort()
                 total_dates = [pd.to_datetime(date).strftime('%d-%m-%Y') for date in total_dates]
-                date_selected = st.selectbox('Selecciona una fecha de avistamiento', total_dates, index=12, key='fecha_avistamiento_orilla')
+                date_selected = st.selectbox('Selecciona una fecha de avistamiento', total_dates, index=0, key='fecha_avistamiento_orilla')
                 start_date = pd.to_datetime(date_selected, format="%d-%m-%Y").strftime('%Y-%m-%d')
         
             with col2:
