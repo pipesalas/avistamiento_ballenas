@@ -1,18 +1,33 @@
 import pandas as pd
 import numpy as np
 import geopandas as gpd
-from shapely.geometry import MultiPoint
+from shapely.geometry import MultiPoint, LineString, Polygon
 import streamlit as st
 import pydeck as pdk
-from datetime import datetime
+
 import plotly.express as px
 import plotly.graph_objects as go
 import os
 from streamlit_carousel import carousel
 import PIL.Image as Image
 from config import zona_1, zona_2, zona_3, zona_4
-from shapely.geometry import Polygon
 import textwrap
+import gpxpy
+import glob
+from datetime import datetime
+
+def parse_gpx(file_path):
+    with open(file_path, 'r') as gpx_file:
+        gpx = gpxpy.parse(gpx_file)
+
+    data = []
+    for track in gpx.tracks:
+        for segment in track.segments:
+            for point in segment.points:
+                data.append([point.latitude, point.longitude])
+
+    return data
+
 
 
 
@@ -385,11 +400,38 @@ def load_chlorophyll(lat_min, lat_max):
 
 @st.cache_data()
 def load_ruta() -> gpd.GeoDataFrame:
-    ruta = gpd.read_file('data/tracks.geojson')
+    
+    folder_path = './data/tracks/'
+    gpx_files = glob.glob(folder_path + '/*.gpx')
+    ruta = merge_gdfs(gpx_files)
+
     ruta['text'] = ruta['date'].apply(lambda x: f'Fecha: {x}')
     st.write(ruta)
     return ruta
 
+
+def create_geodataframe(date, coordinates):
+    new_coordinates = [(coord[1], coord[0]) for coord in coordinates]
+    
+    line = [LineString(new_coordinates)]
+    gdf = gpd.GeoDataFrame(geometry=line)
+    gdf = gdf.assign(date=date)
+
+    date_format = '%d/%m/%Y'
+    gdf['date'] = gdf['date'].apply(pd.to_datetime,)# format=date_format)
+    
+    return gdf
+
+def merge_gdfs(gpx_files):
+    gdfs = []
+    for file in gpx_files:
+        date = file.split('/')[-1].split('.')[0].replace(':','/')
+        year = date.split('/')[2]
+        day = date.split('/')[0]
+        month = date.split('/')[1]
+        gdfs.append(create_geodataframe(date=f'{year}/{month}/{day}', coordinates=parse_gpx(file)))
+
+    return pd.concat(gdfs)
 
 @st.cache_data()
 def load_datos_avistamientos():
