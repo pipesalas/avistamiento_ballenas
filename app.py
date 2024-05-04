@@ -11,7 +11,8 @@ import os
 from streamlit_carousel import carousel
 import PIL.Image as Image
 from config import zona_1, zona_2, zona_3, zona_4
-from shapely.geometry import Polygon, LineString
+from shapely.geometry import Polygon
+import textwrap
 
 
 
@@ -28,7 +29,7 @@ def main():
     )
 
     lat_min, lat_max = -41, -39
-    ruta = load_ruta()
+    rutas = load_ruta()   
     df_avistamientos, diccionario_color = load_datos_avistamientos()
     df_conteo_directo = load_datos_avistamientos_orilla()    
     
@@ -55,22 +56,8 @@ navegaciones de monitoreo con un equipo de voluntari@s, y otras observaciones ha
 que creamos con este fin. Agradecemos a cada persona que observa el mar y comparte sus avistamientos. 
 
 A continuación puedes seleccionar la fecha y el factor ambiental que quieras visualizar. Además, si existen fotos de ese día se mostrarán en la sección de fotos.''')
-        col1, col2 = st.columns([1, 4])
-        with col1:
-            st.markdown('   ')
-            st.markdown('**Filtro de fechas**')
-            total_dates = list(df_avistamientos['Fecha'].unique()) + list(df_conteo_directo['Fecha'].unique())
-            total_dates.sort()
-            total_dates = [pd.to_datetime(date).strftime('%d-%m-%Y') for date in total_dates]
-            date_selected = st.selectbox('Fecha de avistamiento', total_dates, index=12)
-            start_date = pd.to_datetime(date_selected, format="%d-%m-%Y").strftime('%Y-%m-%d')
-            
-
-            st.markdown('**Filtro de variables**')
-            variable = st.radio('Seleccionamos una variable', ['Temperatura', 'Clorofila', 'Fitoplancton'], key='variable')
-            var = {'Temperatura': 'temperature', 'Clorofila': 'chlorophyll', 'Fitoplancton': 'phyc'}[variable]
-
-        with col2:
+        _, col, _ = st.columns([1, 10, 1])    
+        with col:
             tab1, tab2 = st.tabs(['Conteo de especies', 'Conteo por fecha'])
             with tab1:
                 plot_conteo_especies(df_avistamientos, df_conteo_directo)
@@ -81,17 +68,44 @@ A continuación puedes seleccionar la fecha y el factor ambiental que quieras vi
     
         st.header('Mapas de avistamientos')
         tab_barco, tab_orilla = st.tabs(['Avistamientos desde barco', 'Avistamientos desde orilla'])
-        with tab_orilla:
-            if len(df_conteo_directo.query('Fecha==@start_date')) == 0:
-                st.warning('No hay avistamientos en la fecha seleccionada')
-            else:
-                plot_conteo_directo(df_conteo_directo, start_date)
         with tab_barco:
-            df_mapa = {'temperature': temperature, 'chlorophyll': chlorophyll, 'phyc': chlorophyll}[var]
-            if len(df_avistamientos.query('Fecha==@start_date')) == 0:
-                st.warning('No hay avistamientos en la fecha seleccionada')
-            else:
-                plot_mapa(df_mapa.query('time==@start_date'), ruta, df_avistamientos.query('Fecha==@start_date'), var, diccionario_color)
+            col1, col2 = st.columns([1, 4])
+            with col1:
+                st.markdown('**Filtro de fechas**')
+                total_dates = list(df_avistamientos['Fecha'].unique())
+                total_dates.sort()
+                total_dates = [pd.to_datetime(date).strftime('%d-%m-%Y') for date in total_dates]
+                date_selected = st.selectbox('Selecciona una fecha de avistamiento', total_dates, index=0, key='fecha_avistamiento_barco')
+                start_date = pd.to_datetime(date_selected, format="%d-%m-%Y").strftime('%Y-%m-%d')
+
+                st.markdown('**Filtro de variables**')
+                variable = st.radio('Coloreamos con una variable', ['Temperatura', 'Clorofila', 'Fitoplancton'], key='variable')
+                var = {'Temperatura': 'temperature', 'Clorofila': 'chlorophyll', 'Fitoplancton': 'phyc'}[variable]
+
+            with col2:
+                df_mapa = {'temperature': temperature, 'chlorophyll': chlorophyll, 'phyc': chlorophyll}[var]
+                if len(df_avistamientos.query('Fecha==@start_date')) == 0:
+                    st.warning('No hay avistamientos en la fecha seleccionada')
+                else:
+                    plot_mapa(df_mapa.query('time==@start_date'), rutas.query('date==@start_date'), df_avistamientos.query('Fecha==@start_date'), var, diccionario_color)
+
+
+        with tab_orilla:
+            col1, col2 = st.columns([1, 4])
+            with col1:
+                st.markdown('**Filtro de fechas**')
+                total_dates = list(df_conteo_directo['Fecha'].unique())
+                total_dates.sort()
+                total_dates = [pd.to_datetime(date).strftime('%d-%m-%Y') for date in total_dates]
+                date_selected = st.selectbox('Selecciona una fecha de avistamiento', total_dates, index=12, key='fecha_avistamiento_orilla')
+                start_date = pd.to_datetime(date_selected, format="%d-%m-%Y").strftime('%Y-%m-%d')
+        
+            with col2:
+                if len(df_conteo_directo.query('Fecha==@start_date')) == 0:
+                    st.warning('No hay avistamientos en la fecha seleccionada')
+                else:
+                    plot_conteo_directo(df_conteo_directo, start_date)
+
 
     
         ploteamos_fotos(start_date)
@@ -135,7 +149,8 @@ def ploteamos_fotos(start_date):
 
 
 def conteo_especie_tiempo(df_avistamientos,  df_conteo_directo, width=800, height=400):
-    df_number_avistamientos = df_avistamientos.groupby('Fecha').size().reset_index(name='counts')
+    df_toplot = pd.concat((df_avistamientos[['Fecha', 'Especie']].copy(), df_conteo_directo[['Fecha', 'Especie']].copy()), axis=0)
+    df_number_avistamientos = df_toplot.groupby('Fecha').size().reset_index(name='counts')
     fig = px.bar(df_number_avistamientos, 
             x='Fecha', 
             y='counts', 
@@ -147,13 +162,9 @@ def conteo_especie_tiempo(df_avistamientos,  df_conteo_directo, width=800, heigh
     
 
 def plot_conteo_especies(df_avistamientos, df_conteo_directo, width=800, height=400):
-    st.write(df_avistamientos.head(2))
-    st.write(df_conteo_directo.head(2))
     
     df_toplot = pd.concat((df_avistamientos['Especie'].copy(), df_conteo_directo['Especie'].copy()), axis=0)
-    st.write(df_toplot)
     df_toplot = df_toplot.apply(lambda x: x.split(' (')[0])
-    st.write(df_toplot)
     species_counts = df_toplot.value_counts()
     fig = px.bar(species_counts, 
                  #y=species_counts.values[0], 
@@ -169,6 +180,7 @@ def plot_conteo_especies(df_avistamientos, df_conteo_directo, width=800, height=
 
 
 def plot_mapa(dataf, ruta, df_avistamientos, variable, diccionario_color):
+
     color_range = {'temperature': [
         [255, 255, 204],  # Light Yellow
         [255, 237, 160],  # Lighter Yellow
@@ -209,6 +221,7 @@ def plot_mapa(dataf, ruta, df_avistamientos, variable, diccionario_color):
         return color_range[i]
 
     dataf["fill_color"] = dataf[variable].apply(lambda row: color_scale(row))
+
 
     layers = [
         pdk.Layer(
@@ -258,7 +271,7 @@ def plot_mapa(dataf, ruta, df_avistamientos, variable, diccionario_color):
 
     view_state = pdk.ViewState(
         latitude=-39.92,
-        longitude=-73.7,
+        longitude=-73.65,
         zoom=11,
         pitch=50,
     )
@@ -277,6 +290,7 @@ def plot_mapa(dataf, ruta, df_avistamientos, variable, diccionario_color):
 def plot_conteo_directo(df_conteo_directo, fecha, width=800, height=400):
     
     textos = df_conteo_directo.groupby(['Fecha'])['text'].apply(lambda x: ', '.join(x)).reset_index()
+    textos['text'] = textos['text'].apply(lambda x: '\n'.join(textwrap.wrap(x, width=50)))
     df_conteo_directo = (df_conteo_directo
                          .query('Fecha == @fecha')
                          .merge(textos.rename({'text': 'texto_completo'}, axis=1), on='Fecha', how='left'))
@@ -300,8 +314,8 @@ def plot_conteo_directo(df_conteo_directo, fecha, width=800, height=400):
     ]
 
     view_state = pdk.ViewState(
-        latitude=-39.92,
-        longitude=-73.7,
+        latitude=-39.93,
+        longitude=-73.65,
         zoom=11,
         pitch=50,
     )
@@ -371,14 +385,14 @@ def load_chlorophyll(lat_min, lat_max):
 
 @st.cache_data()
 def load_ruta() -> gpd.GeoDataFrame:
-    ruta = gpd.read_file('data/ruta.geojson')
+    ruta = gpd.read_file('data/tracks.geojson')
+    ruta['text'] = ruta['date'].apply(lambda x: f'Fecha: {x}')
     return ruta
 
 
 @st.cache_data()
 def load_datos_avistamientos():
     df = pd.read_excel('data/datos_avistamientos.xlsx')
-    st.write(df)
     df.columns = [col.strip() for col in df.columns]
     df.rename(columns={'Latitud': 'latitude', 'Longitud': 'longitude'}, inplace=True)
     unique_species = df['Especie'].unique()
@@ -388,7 +402,9 @@ def load_datos_avistamientos():
     df['color'] = df['Especie'].map(species_color)
     df.loc[:, 'numero_individuos_log'] = np.log(df['individuos'] + 1)
 
-    df.loc[:, 'text'] = df.apply(lambda row: f"Especie: {row['Especie']}, \nNumero de individuos: {row['individuos']}, \nObservaciones: {row['Observaciones']}" if pd.notnull(row['Observaciones']) else f"Especie: {row['Especie']}, \nNumero de individuos: {row['individuos']}", axis=1)
+    df['Observaciones'] = df['Observaciones'].apply(lambda x: 'Observaciones: ' + x if pd.notnull(x) else x)
+    df['Observaciones'] = df['Observaciones'].apply(lambda x: '\n'.join(textwrap.wrap(x, width=50)) if pd.notnull(x) else x)
+    df.loc[:, 'text'] = df.apply(lambda row: f"Especie: {row['Especie']} \nNumero de individuos: {row['individuos']} \n{row['Observaciones']}", axis=1)
     
     return df, species_color
 
