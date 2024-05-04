@@ -61,8 +61,10 @@ A continuación puedes seleccionar la fecha y el factor ambiental que quieras vi
             st.markdown('**Filtro de fechas**')
             total_dates = list(df_avistamientos['Fecha'].unique()) + list(df_conteo_directo['Fecha'].unique())
             total_dates.sort()
-            dates = [str(date).split(' ')[0] for date in total_dates]
-            start_date = st.selectbox('Fecha de avistamiento', dates, index=12)
+            total_dates = [pd.to_datetime(date).strftime('%d-%m-%Y') for date in total_dates]
+            date_selected = st.selectbox('Fecha de avistamiento', total_dates, index=12)
+            start_date = pd.to_datetime(date_selected, format="%d-%m-%Y").strftime('%Y-%m-%d')
+            
 
             st.markdown('**Filtro de variables**')
             variable = st.radio('Seleccionamos una variable', ['Temperatura', 'Clorofila', 'Fitoplancton'], key='variable')
@@ -71,9 +73,9 @@ A continuación puedes seleccionar la fecha y el factor ambiental que quieras vi
         with col2:
             tab1, tab2 = st.tabs(['Conteo de especies', 'Conteo por fecha'])
             with tab1:
-                plot_conteo_especies(df_avistamientos)
+                plot_conteo_especies(df_avistamientos, df_conteo_directo)
             with tab2:
-                conteo_especie_tiempo(df_avistamientos)
+                conteo_especie_tiempo(df_avistamientos, df_conteo_directo)
             
 
     
@@ -132,7 +134,7 @@ def ploteamos_fotos(start_date):
 
 
 
-def conteo_especie_tiempo(df_avistamientos, width=800, height=400):
+def conteo_especie_tiempo(df_avistamientos,  df_conteo_directo, width=800, height=400):
     df_number_avistamientos = df_avistamientos.groupby('Fecha').size().reset_index(name='counts')
     fig = px.bar(df_number_avistamientos, 
             x='Fecha', 
@@ -144,10 +146,15 @@ def conteo_especie_tiempo(df_avistamientos, width=800, height=400):
     st.plotly_chart(fig)
     
 
-def plot_conteo_especies(df_avistamientos, width=800, height=400):
-    df_toplot = df_avistamientos.copy()
-    df_toplot['Especie'] = df_toplot['Especie'].apply(lambda x: x.split(' (')[0])
-    species_counts = df_toplot['Especie'].value_counts()
+def plot_conteo_especies(df_avistamientos, df_conteo_directo, width=800, height=400):
+    st.write(df_avistamientos.head(2))
+    st.write(df_conteo_directo.head(2))
+    
+    df_toplot = pd.concat((df_avistamientos['Especie'].copy(), df_conteo_directo['Especie'].copy()), axis=0)
+    st.write(df_toplot)
+    df_toplot = df_toplot.apply(lambda x: x.split(' (')[0])
+    st.write(df_toplot)
+    species_counts = df_toplot.value_counts()
     fig = px.bar(species_counts, 
                  #y=species_counts.values[0], 
                  #x=species_counts.index, 
@@ -371,7 +378,9 @@ def load_ruta() -> gpd.GeoDataFrame:
 @st.cache_data()
 def load_datos_avistamientos():
     df = pd.read_excel('data/datos_avistamientos.xlsx')
-    df['Fecha'] = pd.to_datetime(df['Fecha'], errors='coerce')
+    st.write(df)
+    df.columns = [col.strip() for col in df.columns]
+    df.rename(columns={'Latitud': 'latitude', 'Longitud': 'longitude'}, inplace=True)
     unique_species = df['Especie'].unique()
     colors = [[np.random.randint(0, 256), np.random.randint(0, 256), np.random.randint(0, 256)] for _ in range(len(unique_species))]
     species_color = dict(zip(unique_species, colors))
