@@ -387,6 +387,7 @@ def load_chlorophyll(lat_min, lat_max):
 def load_ruta() -> gpd.GeoDataFrame:
     ruta = gpd.read_file('data/tracks.geojson')
     ruta['text'] = ruta['date'].apply(lambda x: f'Fecha: {x}')
+    st.write(ruta)
     return ruta
 
 
