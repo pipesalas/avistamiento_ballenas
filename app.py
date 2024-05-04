@@ -174,8 +174,9 @@ def conteo_especie_tiempo(df_avistamientos,  df_conteo_directo, width=800, heigh
 
 def plot_conteo_especies(df_avistamientos, df_conteo_directo, width=800, height=400):
     
+    #st.write(df_avistamientos.head(1))
+    #st.write(df_conteo_directo.head(1))
     df_toplot = pd.concat((df_avistamientos['Especie'].copy(), df_conteo_directo['Especie'].copy()), axis=0)
-    st.write(df_toplot. unique())
     df_toplot = df_toplot.apply(lambda x: x.split(' (')[0])
     species_counts = df_toplot.value_counts()
     fig = px.bar(species_counts, 
@@ -304,22 +305,26 @@ def plot_conteo_directo(df_conteo_directo, fecha, width=800, height=400):
     textos = df_conteo_directo.groupby(['Fecha'])['text'].apply(lambda x: ', '.join(x)).reset_index()
     textos['text'] = textos['text'].apply(lambda x: '\n'.join(textwrap.wrap(x, width=50)))
     if fecha == 'Todas las fechas':
-        
-        df_conteo_directo = (df_conteo_directo
-                            .merge(textos.rename({'text': 'texto_completo'}, axis=1), on='Fecha', how='left')
-                            .groupby('Subzona')['text'].apply(lambda x: ', '.join(x)).reset_index())
-        st.write(df_conteo_directo.merge(df_original[['Subzona', 'geometry']].drop_duplicates().copy(), on='Subzona', how='left'))
+        df_toplot = (df_conteo_directo.groupby(['Especie', 'Subzona'])['Numero'].sum().reset_index())                            
+        df_toplot['texto_completo'] = df_toplot.apply(lambda row: f"{row['Especie'].split(' (')[0]} ({row['Numero']} ejemplares)", axis=1)
+
+        df_toplot = df_toplot.groupby(['Subzona'])['texto_completo'].apply(lambda x: '\n'.join(x)).reset_index()
+        diccionario_zonas = df_original[['Subzona', 'geometry']].drop_duplicates(subset=['Subzona']).set_index('Subzona').to_dict(orient='index')
+        diccionario_color = df_original[['Subzona', 'color']].drop_duplicates(subset=['Subzona']).set_index('Subzona').to_dict(orient='index')
+        df_toplot['geometry'] = df_toplot['Subzona'].apply(lambda x: diccionario_zonas[x]['geometry'])
+        df_toplot['color'] = df_toplot['Subzona'].apply(lambda x: diccionario_color[x]['color'])
+        df_toplot = gpd.GeoDataFrame(df_toplot, geometry='geometry')
+
     else:
         df_conteo_directo = (df_conteo_directo
                          .query('Fecha == @fecha')
                          .merge(textos.rename({'text': 'texto_completo'}, axis=1), on='Fecha', how='left'))
     
-    df_toplot = df_conteo_directo.drop_duplicates(subset=['Fecha'])
-    st.write(df_toplot)
+        df_toplot = df_conteo_directo.drop_duplicates(subset=['Fecha'])
     layers = [
         pdk.Layer(
             'PolygonLayer',
-            data=df_toplot[['geometry', 'color', 'Numero', 'texto_completo']],
+            data=df_toplot[['geometry', 'color', 'texto_completo']],
             get_polygon='geometry.coordinates',
             #get_elevation='Numero',
             get_fill_color='color',
@@ -464,8 +469,8 @@ def load_datos_avistamientos():
     df['color'] = df['Especie'].map(species_color)
     df.loc[:, 'numero_individuos_log'] = np.log(df['individuos'] + 1)
 
-    df['Observaciones'] = df['Observaciones'].apply(lambda x: 'Observaciones: ' + x if pd.notnull(x) else x)
-    df['Observaciones'] = df['Observaciones'].apply(lambda x: '\n'.join(textwrap.wrap(x, width=50)) if pd.notnull(x) else x)
+    df['Observaciones'] = df['Observaciones'].apply(lambda x: 'Observaciones: ' + x if pd.notnull(x) else '')
+    df['Observaciones'] = df['Observaciones'].apply(lambda x: '\n'.join(textwrap.wrap(x, width=50)) if pd.notnull(x) else '')
     df.loc[:, 'text'] = df.apply(lambda row: f"Especie: {row['Especie']} \nNumero de individuos: {row['individuos']} \n{row['Observaciones']}", axis=1)
     
     return df, species_color
@@ -474,7 +479,6 @@ def load_datos_avistamientos():
 @st.cache_data()
 def load_datos_avistamientos_orilla():
     df = pd.read_excel('data/Planilla conteo directo .xlsx', skiprows=1)
-    #df['Fecha'] = pd.to_datetime(df['Fecha'], errors='coerce')
     zonas = {1: Polygon(zona_1['coordinates'][0]), 2: Polygon(zona_2['coordinates'][0]), 3: Polygon(zona_3['coordinates'][0]), 4: Polygon(zona_4['coordinates'][0])}
     df.columns = [col.strip() for col in df.columns]
     df['color'] = df['Subzona'].map({
