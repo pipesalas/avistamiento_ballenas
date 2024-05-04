@@ -404,9 +404,7 @@ def load_ruta() -> gpd.GeoDataFrame:
     folder_path = './data/tracks/'
     gpx_files = glob.glob(folder_path + '/*.gpx')
     ruta = merge_gdfs(gpx_files)
-
     ruta['text'] = ruta['date'].apply(lambda x: f'Fecha: {x}')
-    st.write(ruta)
     return ruta
 
 
