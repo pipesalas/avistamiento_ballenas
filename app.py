@@ -73,21 +73,18 @@ A continuación puedes seleccionar la fecha y el factor ambiental que quieras vi
         with tab_barco:
             col1, col2 = st.columns([1, 4])
             with col1:
-                st.markdown('**Filtro de fechas**')
-                total_dates = list(df_avistamientos['Fecha'].unique())
-                total_dates.sort()
-                total_dates = [pd.to_datetime(date).strftime('%d-%m-%Y') for date in total_dates]
-                date_selected = st.selectbox('Selecciona una fecha de avistamiento', total_dates, index=0, key='fecha_avistamiento_barco')
-                start_date = pd.to_datetime(date_selected, format="%d-%m-%Y").strftime('%Y-%m-%d')
+                start_date = filtro_fechas(df_avistamientos, todas_las_fechas=True)
 
                 st.markdown('**Filtro de variables**')
                 variable = st.radio('Coloreamos con una variable', ['Temperatura', 'Clorofila', 'Fitoplancton'], key='variable')
                 var = {'Temperatura': 'temperature', 'Clorofila': 'chlorophyll', 'Fitoplancton': 'phyc'}[variable]
+                df_mapa = {'temperature': temperature, 'chlorophyll': chlorophyll, 'phyc': chlorophyll}[var]
 
             with col2:
-                df_mapa = {'temperature': temperature, 'chlorophyll': chlorophyll, 'phyc': chlorophyll}[var]
-                if len(df_avistamientos.query('Fecha==@start_date')) == 0:
+                if len(df_avistamientos.query('Fecha==@start_date')) == 0 and start_date != "Todas las fechas":
                     st.warning('No hay avistamientos en la fecha seleccionada')
+                elif start_date == "Todas las fechas":
+                    plot_mapa(df_mapa.query('time=="2025-01-01"'), rutas.query('date=="2023-03-22"'), df_avistamientos, var, diccionario_color)
                 else:
                     plot_mapa(df_mapa.query('time==@start_date'), rutas.query('date==@start_date'), df_avistamientos.query('Fecha==@start_date'), var, diccionario_color)
 
@@ -95,22 +92,34 @@ A continuación puedes seleccionar la fecha y el factor ambiental que quieras vi
         with tab_orilla:
             col1, col2 = st.columns([1, 4])
             with col1:
-                st.markdown('**Filtro de fechas**')
-                total_dates = list(df_conteo_directo['Fecha'].unique())
-                total_dates.sort()
-                total_dates = [pd.to_datetime(date).strftime('%d-%m-%Y') for date in total_dates]
-                date_selected = st.selectbox('Selecciona una fecha de avistamiento', total_dates, index=0, key='fecha_avistamiento_orilla')
-                start_date = pd.to_datetime(date_selected, format="%d-%m-%Y").strftime('%Y-%m-%d')
+                start_date = filtro_fechas(df_conteo_directo, todas_las_fechas=True, key='avistamiento_orilla')
         
             with col2:
-                if len(df_conteo_directo.query('Fecha==@start_date')) == 0:
+                if len(df_conteo_directo.query('Fecha==@start_date')) == 0 and start_date != "Todas las fechas":
                     st.warning('No hay avistamientos en la fecha seleccionada')
                 else:
                     plot_conteo_directo(df_conteo_directo, start_date)
 
 
-    
-        ploteamos_fotos(start_date)
+        if start_date != "Todas las fechas":
+            ploteamos_fotos(start_date)
+
+
+def filtro_fechas(df_avistamientos: pd.DataFrame, 
+                  todas_las_fechas: bool = False, 
+                  key: str = 'avistamiento_barco') -> datetime:
+    st.markdown('**Filtro de fechas**')
+    total_dates = list(df_avistamientos['Fecha'].unique())
+    total_dates.sort()
+    total_dates = [pd.to_datetime(date).strftime('%d-%m-%Y') for date in total_dates]
+    if todas_las_fechas:
+        total_dates = ['Todas las fechas'] + total_dates
+    date_selected = st.selectbox('Selecciona una fecha de avistamiento', total_dates, index=0, key=key)
+    if date_selected == 'Todas las fechas':
+        start_date = "Todas las fechas"
+    else:
+        start_date = pd.to_datetime(date_selected, format="%d-%m-%Y").strftime('%Y-%m-%d')
+    return start_date
 
 
 
@@ -166,6 +175,7 @@ def conteo_especie_tiempo(df_avistamientos,  df_conteo_directo, width=800, heigh
 def plot_conteo_especies(df_avistamientos, df_conteo_directo, width=800, height=400):
     
     df_toplot = pd.concat((df_avistamientos['Especie'].copy(), df_conteo_directo['Especie'].copy()), axis=0)
+    st.write(df_toplot. unique())
     df_toplot = df_toplot.apply(lambda x: x.split(' (')[0])
     species_counts = df_toplot.value_counts()
     fig = px.bar(species_counts, 
@@ -290,14 +300,22 @@ def plot_mapa(dataf, ruta, df_avistamientos, variable, diccionario_color):
 
 
 def plot_conteo_directo(df_conteo_directo, fecha, width=800, height=400):
-    
+    df_original = df_conteo_directo.copy()
     textos = df_conteo_directo.groupby(['Fecha'])['text'].apply(lambda x: ', '.join(x)).reset_index()
     textos['text'] = textos['text'].apply(lambda x: '\n'.join(textwrap.wrap(x, width=50)))
-    df_conteo_directo = (df_conteo_directo
+    if fecha == 'Todas las fechas':
+        
+        df_conteo_directo = (df_conteo_directo
+                            .merge(textos.rename({'text': 'texto_completo'}, axis=1), on='Fecha', how='left')
+                            .groupby('Subzona')['text'].apply(lambda x: ', '.join(x)).reset_index())
+        st.write(df_conteo_directo.merge(df_original[['Subzona', 'geometry']].drop_duplicates().copy(), on='Subzona', how='left'))
+    else:
+        df_conteo_directo = (df_conteo_directo
                          .query('Fecha == @fecha')
                          .merge(textos.rename({'text': 'texto_completo'}, axis=1), on='Fecha', how='left'))
-    df_toplot = df_conteo_directo.drop_duplicates(subset=['Fecha'])
     
+    df_toplot = df_conteo_directo.drop_duplicates(subset=['Fecha'])
+    st.write(df_toplot)
     layers = [
         pdk.Layer(
             'PolygonLayer',
