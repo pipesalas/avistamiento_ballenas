@@ -56,8 +56,7 @@ def main():
 En esta aplicación podrás ver las observaciones que se han realizado durante el proyecto de investigación que llevamos realizando. Algunas de las observaciones se han realizado durante
 navegaciones de monitoreo con un equipo de voluntari@s, y otras observaciones han realizado desde tierra vecinas y vecinos de las localidades a través de un chat de whatsapp
 que creamos con este fin. Agradecemos a cada persona que observa el mar y comparte sus avistamientos. 
-
-A continuación puedes seleccionar la fecha y el factor ambiental que quieras visualizar. Además, si existen fotos de ese día se mostrarán en la sección de fotos.''')
+''')
         _, col, _ = st.columns([1, 10, 1])    
         with col:
             tab1, tab2 = st.tabs(['Conteo de especies', 'Conteo por fecha'])
@@ -69,6 +68,7 @@ A continuación puedes seleccionar la fecha y el factor ambiental que quieras vi
 
     
         st.header('Mapas de avistamientos')
+        st.markdown('''A continuación puedes seleccionar la fecha y el factor ambiental que quieras visualizar. Además, si existen fotos de ese día se mostrarán en la sección de fotos.''')
         tab_barco, tab_orilla = st.tabs(['Avistamientos desde barco', 'Avistamientos desde orilla'])
         with tab_barco:
             col1, col2 = st.columns([1, 4])
