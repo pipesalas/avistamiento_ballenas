@@ -16,19 +16,6 @@ import gpxpy
 import glob
 from datetime import datetime
 
-def parse_gpx(file_path):
-    with open(file_path, 'r') as gpx_file:
-        gpx = gpxpy.parse(gpx_file)
-
-    data = []
-    for track in gpx.tracks:
-        for segment in track.segments:
-            for point in segment.points:
-                data.append([point.latitude, point.longitude])
-
-    return data
-
-
 
 
 def main():
@@ -420,6 +407,7 @@ def create_geodataframe(date, coordinates):
     
     return gdf
 
+
 def merge_gdfs(gpx_files):
     gdfs = []
     for file in gpx_files:
@@ -430,6 +418,21 @@ def merge_gdfs(gpx_files):
         gdfs.append(create_geodataframe(date=f'{year}/{month}/{day}', coordinates=parse_gpx(file)))
 
     return pd.concat(gdfs)
+
+
+def parse_gpx(file_path):
+    with open(file_path, 'r') as gpx_file:
+        gpx = gpxpy.parse(gpx_file)
+
+    data = []
+    for track in gpx.tracks:
+        for segment in track.segments:
+            for point in segment.points:
+                data.append([point.latitude, point.longitude])
+
+    return data
+
+
 
 @st.cache_data()
 def load_datos_avistamientos():
