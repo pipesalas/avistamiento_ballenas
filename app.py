@@ -107,7 +107,7 @@ reportados por vecinos y vecinas de las localidades, fueron comunicados a travé
                 else:
                     plot_conteo_directo(df_conteo_directo, start_date_orilla)
             if start_date_orilla != "Todas las fechas":
-                ploteamos_fotos(start_date_orilla, folder='data/fotos_conteo_directo', sep='/')
+                ploteamos_fotos(start_date_orilla, folder='data/fotos_conteo_directo', sep=':')
 
 
         
@@ -174,6 +174,7 @@ def ploteamos_fotos(start_date: Union[str, pd.Timestamp], sep: str = '_', folder
     files = os.listdir(folder)
     files = [os.path.join(folder, file) for file in files]
     fotos_day = [file for file in files if chilean_date in file]
+    st.write(fotos_day)
     if len(fotos_day) == 0:
         st.warning('No hay fotos en la fecha seleccionada')
     else:
