@@ -109,6 +109,37 @@ reportados por vecinos y vecinas de las localidades, fueron comunicados a travé
 
             ploteamos_fotos(start_date_orilla, folder='data/fotos_conteo_directo', sep=':')
 
+        plot_comportamiento(df_avistamientos)
+
+
+
+def plot_comportamiento(df_avistamientos: pd.DataFrame) -> None:
+    """
+    Plots the behavior of marine mammals based on the given data.
+
+    Args:
+        df (pd.DataFrame): The DataFrame containing the behavior data.
+
+    Returns:
+        None
+    """
+    df_toplot = (df_avistamientos.groupby(['Especie', 'Comportamiento'], as_index=False)['Fecha']
+                                 .count()
+                                 .rename(columns={'Fecha':'Conteo'})
+                                 .sort_values(by='Conteo', ascending=False)
+                                 .copy())
+    fig = px.bar(df_toplot, 
+                 x='Especie', 
+                 y='Conteo', 
+                 color='Comportamiento', 
+                 title='Comportamiento de las especies', 
+                 barmode='stack', 
+                 width=1000, 
+                 height=600, 
+                 text_auto=True)
+
+    st.plotly_chart(fig)
+
 
 
 
@@ -212,7 +243,7 @@ def ploteamos_fotos(start_date: Union[str, pd.Timestamp],
                                 img=f"https://github.com/pipesalas/avistamiento_ballenas/blob/main/{file}?raw=true",
                             ))
         
-        carousel(items=test_items, width=1, height=2000)
+        carousel(items=test_items, width=1, height=1500)
 
 
 
