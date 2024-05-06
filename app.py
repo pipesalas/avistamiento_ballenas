@@ -92,8 +92,8 @@ reportados por vecinos y vecinas de las localidades, fueron comunicados a travé
                     plot_mapa(df_mapa.query('time=="2025-01-01"'), rutas.query('date=="2023-03-22"'), df_avistamientos, var, diccionario_color)
                 else:
                     plot_mapa(df_mapa.query('time==@start_date_barco'), rutas.query('date==@start_date_barco'), df_avistamientos.query('Fecha==@start_date_barco'), var, diccionario_color)
-            if start_date_barco != "Todas las fechas":
-                ploteamos_fotos(start_date_barco)
+            #if start_date_barco != "Todas las fechas":
+            ploteamos_fotos(start_date_barco)
 
 
         with tab_orilla:
@@ -106,8 +106,8 @@ reportados por vecinos y vecinas de las localidades, fueron comunicados a travé
                     st.warning('No hay avistamientos en la fecha seleccionada')
                 else:
                     plot_conteo_directo(df_conteo_directo, start_date_orilla)
-            if start_date_orilla != "Todas las fechas":
-                ploteamos_fotos(start_date_orilla, folder='data/fotos_conteo_directo', sep=':')
+            #if start_date_orilla != "Todas las fechas":
+            ploteamos_fotos(start_date_orilla, folder='data/fotos_conteo_directo', sep=':')
 
 
         
@@ -170,10 +170,13 @@ def ploteamos_fotos(start_date: Union[str, pd.Timestamp], sep: str = '_', folder
     Returns:
         None
     """
-    chilean_date = get_correct_chilean_date(start_date, sep=sep)
     files = os.listdir(folder)
     files = [os.path.join(folder, file) for file in files]
-    fotos_day = [file for file in files if chilean_date in file]
+    if start_date == 'Todas las fechas':
+        fotos_day = files
+    else:
+        chilean_date = get_correct_chilean_date(start_date, sep=sep)
+        fotos_day = [file for file in files if chilean_date in file]
     if len(fotos_day) == 0:
         st.warning('No hay fotos en la fecha seleccionada')
     else:
