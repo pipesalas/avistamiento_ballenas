@@ -30,7 +30,6 @@ def main():
     layout="wide",
     menu_items={
         'About': "Datos de avistamiento marinos realizados por *vuelve al oceano* https://www.vuelvealoceano.cl",
-        #'Vuelve Al Oceano': '',
     }
     )
 
@@ -114,14 +113,30 @@ reportados por vecinos y vecinas de las localidades, fueron comunicados a travé
 
 
 
+
 def plot_logo() -> None:
+    """
+    Displays the vuelvealoceano logo image on the Streamlit app.
+    """
     image = Image.open('data/logo_vuelvealoceano.png')
-    st.image(image, use_column_width=True,)
+    st.image(image, use_column_width=True)
 
 
 def filtro_fechas(df_avistamientos: pd.DataFrame, 
                   todas_las_fechas: bool = False, 
                   key: str = 'avistamiento_barco') -> datetime:
+    """
+    Filter dates based on user selection.
+
+    Args:
+        df_avistamientos (pd.DataFrame): The DataFrame containing the avistamientos data.
+        todas_las_fechas (bool, optional): Whether to include all dates in the selection. Defaults to False.
+        key (str, optional): The key used for caching the selection. Defaults to 'avistamiento_barco'.
+
+    Returns:
+        datetime: The selected start date in the format '%Y-%m-%d'.
+    """
+
     st.markdown('**Filtro de fechas**')
     total_dates = list(df_avistamientos['Fecha'].unique())
     total_dates.sort()
@@ -207,6 +222,18 @@ def conteo_especie_tiempo(df_avistamientos: pd.DataFrame,
                           df_conteo_directo: pd.DataFrame, 
                           width: int = 800, 
                           height: int = 400) -> None:
+    """
+    Plots the number of sightings over time for different species.
+    
+    Args:
+        df_avistamientos (pd.DataFrame): DataFrame containing sighting data with columns 'Fecha' and 'Especie'.
+        df_conteo_directo (pd.DataFrame): DataFrame containing direct count data with columns 'Fecha' and 'Especie'.
+        width (int, optional): Width of the plot. Defaults to 800.
+        height (int, optional): Height of the plot. Defaults to 400.
+    
+    Returns:
+        None
+    """
     
     df_toplot = pd.concat((df_avistamientos[['Fecha', 'Especie']].copy(), df_conteo_directo[['Fecha', 'Especie']].copy()), axis=0)
     df_number_avistamientos = df_toplot.groupby('Fecha').size().reset_index(name='counts')
@@ -224,6 +251,15 @@ def plot_conteo_especies(df_avistamientos: pd.DataFrame,
                          df_conteo_directo: pd.DataFrame, 
                          width: int = 800, 
                          height: int = 400):
+    """
+    Plots the count of species sightings.
+
+    Args:
+        df_avistamientos (pd.DataFrame): DataFrame containing species sightings data.
+        df_conteo_directo (pd.DataFrame): DataFrame containing direct count data.
+        width (int, optional): Width of the plot. Defaults to 800.
+        height (int, optional): Height of the plot. Defaults to 400.
+    """
     
     df_toplot = pd.concat((df_avistamientos['Especie'].copy(), df_conteo_directo['Especie'].copy()), axis=0)
     df_toplot = df_toplot.apply(lambda x: x.split(' (')[0])
@@ -242,6 +278,18 @@ def plot_mapa(dataf: pd.DataFrame,
               ruta: gpd.GeoDataFrame, 
               df_avistamientos: pd.DataFrame, 
               variable: str) -> None:
+    """
+    Plots a map with various layers using the given dataframes and variable.
+
+    Args:
+        dataf (pd.DataFrame): The dataframe containing the main data for the map.
+        ruta (gpd.GeoDataFrame): The geodataframe containing the route data for the map.
+        df_avistamientos (pd.DataFrame): The dataframe containing the avistamientos data for the map.
+        variable (str): The variable to be used for coloring the map.
+
+    Returns:
+        None
+    """
 
     color_range = {'temperature': [
         [255, 255, 204],  # Light Yellow
@@ -349,6 +397,16 @@ def plot_mapa(dataf: pd.DataFrame,
 
 
 def plot_conteo_directo(df_conteo_directo, fecha, width=800, height=400):
+    """
+    Plots the count of direct sightings on a map.
+
+    Args:
+        df_conteo_directo (DataFrame): The dataframe containing the count of direct sightings.
+        fecha (str): The date for which the sightings should be plotted. Use 'Todas las fechas' to plot all dates.
+        width (int, optional): The width of the plot in pixels. Defaults to 800.
+        height (int, optional): The height of the plot in pixels. Defaults to 400.
+    """
+    
     df_original = df_conteo_directo.copy()
     textos = df_conteo_directo.groupby(['Fecha'])['text'].apply(lambda x: ', '.join(x)).reset_index()
     textos['text'] = textos['text'].apply(lambda x: '\n'.join(textwrap.wrap(x, width=50)))
@@ -374,15 +432,9 @@ def plot_conteo_directo(df_conteo_directo, fecha, width=800, height=400):
             'PolygonLayer',
             data=df_toplot[['geometry', 'color', 'texto_completo']],
             get_polygon='geometry.coordinates',
-            #get_elevation='Numero',
             get_fill_color='color',
-            #get_line_color=[128, 128, 128], 
-            #line_width_min_pixels=2,
             opacity=0.5,
             pickable=True,
-            #stroked=False,
-            #auto_highlight=True,
-            
         ),
     ]
 
@@ -407,6 +459,7 @@ def plot_conteo_directo(df_conteo_directo, fecha, width=800, height=400):
     
     
 def crop_map(df, lat_min, lat_max, variable='temperature', agg='mean'):
+    
     min_depth = df.depth.min()
     df = df.query(f'latitude >= {lat_min} and latitude <= {lat_max}')
     if variable == 'temperature':
