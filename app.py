@@ -174,7 +174,6 @@ def ploteamos_fotos(start_date: Union[str, pd.Timestamp], sep: str = '_', folder
     files = os.listdir(folder)
     files = [os.path.join(folder, file) for file in files]
     fotos_day = [file for file in files if chilean_date in file]
-    st.write(fotos_day)
     if len(fotos_day) == 0:
         st.warning('No hay fotos en la fecha seleccionada')
     else:
