@@ -15,6 +15,8 @@ import textwrap
 import gpxpy
 import glob
 from datetime import datetime
+from typing import Union
+import pandas as pd
 
 
 
@@ -46,16 +48,19 @@ def main():
         with col_logo:
             image = Image.open('data/logo_vuelvealoceano.png')
             st.image(image, use_column_width=True,)
+
         col_title.title('Monitoreo de mamíferos marinos en las localidades de Huiro y Chaihuin')
-        col_title.caption('Proyecto financiado por TNC Chile y GORE Los Ríos ')
+        col_title.caption('Proyecto financiado por TNC Chile, GORE Los Ríos y ONG Vuelve Al Océano.')
 
-        st.markdown('''El objetivo de este proyecto es conocer qué especies de a mamíferos marinos transitan por el área de estudio (Huiro y Chaihuin, comuna de Corral, Los Ríos, Chile) y qué
-                     comportamientos tienen en la zona. ¿Acaso se alimentan?, ¿descansan?, ¿se reproducen?. Son preguntas que intentamos responder con este monitoreo, con el objetivo de recopilar información y
-                     proponer medidas de protección para estos animales.
+        st.markdown('''El objetivo de este proyecto es conocer qué especies de mamíferos marinos transitan por el área de estudio (Huiro y Chaihuin, comuna de Corral, Los Ríos, Chile) 
+                    y qué comportamientos tienen en la zona. ¿Acaso se alimentan?, ¿descansan?, ¿se reproducen?. Respecto de saber sobre sus dinámicas poblacionales, ¿cuántos individuos son?, 
+                    ¿regresan todos los años?, ¿cuándo están y cuánto tiempo permanecen en el área?. Son preguntas que intentamos responder con los datos obtenidos en este monitoreo,
+                     con el objetivo de entender este ecosistema marino y proponer medidas de conservación para estas especies de mamíferos marinos, que en su mayoría, están en peligro de extinción. 
 
-En esta aplicación podrás ver las observaciones que se han realizado durante el proyecto de investigación que llevamos realizando. Algunas de las observaciones se han realizado durante
-navegaciones de monitoreo con un equipo de voluntari@s, y otras observaciones han realizado desde tierra vecinas y vecinos de las localidades a través de un chat de whatsapp
-que creamos con este fin. Agradecemos a cada persona que observa el mar y comparte sus avistamientos. 
+
+En esta aplicación podrás ver los avistamientos que se han realizado durante el proyecto de investigación que llevamos realizando desde el año 2022 hasta la fecha. Algunas de las observaciones 
+se han realizado durante navegaciones de monitoreo con nuestro equipo de profesionales y voluntari@s previamente capacitados sobre la metodología de estudio. Los avistamientos desde tierra, 
+reportados por vecinos y vecinas de las localidades, fueron comunicados a través de un chat de WhatsApp que fue creado para este fin. Agradecemos a cada persona que observa el mar y comparte sus avistamientos.
 ''')
         _, col, _ = st.columns([1, 10, 1])    
         with col:
@@ -73,7 +78,7 @@ que creamos con este fin. Agradecemos a cada persona que observa el mar y compar
         with tab_barco:
             col1, col2 = st.columns([1, 4])
             with col1:
-                start_date = filtro_fechas(df_avistamientos, todas_las_fechas=True)
+                start_date_barco = filtro_fechas(df_avistamientos, todas_las_fechas=True)
 
                 st.markdown('**Filtro de variables**')
                 variable = st.radio('Coloreamos con una variable', ['Temperatura', 'Clorofila', 'Fitoplancton'], key='variable')
@@ -81,28 +86,31 @@ que creamos con este fin. Agradecemos a cada persona que observa el mar y compar
                 df_mapa = {'temperature': temperature, 'chlorophyll': chlorophyll, 'phyc': chlorophyll}[var]
 
             with col2:
-                if len(df_avistamientos.query('Fecha==@start_date')) == 0 and start_date != "Todas las fechas":
+                if len(df_avistamientos.query('Fecha==@start_date_barco')) == 0 and start_date_barco != "Todas las fechas":
                     st.warning('No hay avistamientos en la fecha seleccionada')
-                elif start_date == "Todas las fechas":
+                elif start_date_barco == "Todas las fechas":
                     plot_mapa(df_mapa.query('time=="2025-01-01"'), rutas.query('date=="2023-03-22"'), df_avistamientos, var, diccionario_color)
                 else:
-                    plot_mapa(df_mapa.query('time==@start_date'), rutas.query('date==@start_date'), df_avistamientos.query('Fecha==@start_date'), var, diccionario_color)
+                    plot_mapa(df_mapa.query('time==@start_date_barco'), rutas.query('date==@start_date_barco'), df_avistamientos.query('Fecha==@start_date_barco'), var, diccionario_color)
+            if start_date_barco != "Todas las fechas":
+                ploteamos_fotos(start_date_barco)
 
 
         with tab_orilla:
             col1, col2 = st.columns([1, 4])
             with col1:
-                start_date = filtro_fechas(df_conteo_directo, todas_las_fechas=True, key='avistamiento_orilla')
+                start_date_orilla = filtro_fechas(df_conteo_directo, todas_las_fechas=True, key='avistamiento_orilla')
         
             with col2:
-                if len(df_conteo_directo.query('Fecha==@start_date')) == 0 and start_date != "Todas las fechas":
+                if len(df_conteo_directo.query('Fecha==@start_date_orilla')) == 0 and start_date_orilla != "Todas las fechas":
                     st.warning('No hay avistamientos en la fecha seleccionada')
                 else:
-                    plot_conteo_directo(df_conteo_directo, start_date)
+                    plot_conteo_directo(df_conteo_directo, start_date_orilla)
+            if start_date_orilla != "Todas las fechas":
+                ploteamos_fotos(start_date_orilla, folder='data/fotos_conteo_directo', sep='/')
 
 
-        if start_date != "Todas las fechas":
-            ploteamos_fotos(start_date)
+        
 
 
 def filtro_fechas(df_avistamientos: pd.DataFrame, 
@@ -123,24 +131,48 @@ def filtro_fechas(df_avistamientos: pd.DataFrame,
 
 
 
-def get_correct_chilean_date(date):
+def get_correct_chilean_date(date: Union[str, pd.Timestamp], sep: str = '_') -> str:
+    """
+    Converts a given date to the correct Chilean date format.
+
+    Args:
+        date (str or pd.Timestamp): The date to be converted.
+        sep (str, optional): The separator to be used in the Chilean date format. Defaults to '-'.
+
+    Returns:
+        str: The converted Chilean date in the format 'DD_MM_YYYY'.
+
+    Example:
+        >>> get_correct_chilean_date('2022-01-15')
+        '15_01_2022'
+    """
     date = pd.to_datetime(date)
     chilean_date = ''
     if date.day < 10:
-        chilean_date += f'0{date.day}_'
+        chilean_date += f'0{date.day}{sep}'
     else:
-        chilean_date += f'{date.day}_'
+        chilean_date += f'{date.day}{sep}'
     if date.month < 10:
-        chilean_date += f'0{date.month}_{date.year}'
+        chilean_date += f'0{date.month}{sep}{date.year}'
     else:
-        chilean_date += f'{date.month}_{date.year}'
+        chilean_date += f'{date.month}{sep}{date.year}'
     return chilean_date
 
 
-def ploteamos_fotos(start_date):
-    chilean_date = get_correct_chilean_date(start_date)
-    files = os.listdir('data/fotos')
-    files = [os.path.join('data/fotos', file) for file in files]
+def ploteamos_fotos(start_date: Union[str, pd.Timestamp], sep: str = '_', folder: str = 'data/fotos'):
+    """
+    Plots photos of whale sightings based on the given start date.
+
+    Args:
+        start_date (str): The start date in the format 'YYYY-MM-DD'.
+        sep (str, optional): The separator used in the filenames. Defaults to '_'.
+
+    Returns:
+        None
+    """
+    chilean_date = get_correct_chilean_date(start_date, sep=sep)
+    files = os.listdir(folder)
+    files = [os.path.join(folder, file) for file in files]
     fotos_day = [file for file in files if chilean_date in file]
     if len(fotos_day) == 0:
         st.warning('No hay fotos en la fecha seleccionada')
