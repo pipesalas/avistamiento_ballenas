@@ -2,12 +2,12 @@ import pandas as pd
 import numpy as np
 import geopandas as gpd
 from shapely.geometry import MultiPoint, LineString, Polygon
-import streamlit as st
 import pydeck as pdk
 
 import plotly.express as px
 import plotly.graph_objects as go
 import os
+import streamlit as st
 from streamlit_carousel import carousel
 import PIL.Image as Image
 from config import zona_1, zona_2, zona_3, zona_4
@@ -15,8 +15,10 @@ import textwrap
 import gpxpy
 import glob
 from datetime import datetime
-from typing import Union
-import pandas as pd
+from typing import Union, List
+from typing import List
+from typing import List
+
 
 
 
@@ -27,27 +29,28 @@ def main():
     page_icon="🌊",
     layout="wide",
     menu_items={
-        'About': "# Datos de avistamiento marinos realizados por *vuelvealoceano*",
-        #'Vuelve Al Oceano': 'https://www.vuelvealoceano.cl',
+        'About': "Datos de avistamiento marinos realizados por *vuelve al oceano* https://www.vuelvealoceano.cl",
+        #'Vuelve Al Oceano': '',
     }
     )
 
     lat_min, lat_max = -41, -39
-    rutas = load_ruta()   
-    df_avistamientos, diccionario_color = load_datos_avistamientos()
-    df_conteo_directo = load_datos_avistamientos_orilla()    
-    
-    chlorophyll = load_chlorophyll(lat_min, lat_max)
-    temperature = load_temperature(lat_min, lat_max)
+    with st.spinner('Leyendo rutas de GPS...'):
+        rutas = load_ruta()   
+    with st.spinner('Leyendo datos de avistamientos...'):
+        df_avistamientos, diccionario_color = load_datos_avistamientos()
+        df_conteo_directo = load_datos_avistamientos_orilla()    
+    with st.spinner('Leyendo datos satelitales de clorofila...'):
+        chlorophyll = load_chlorophyll(lat_min, lat_max)
+    with st.spinner('Leyendo datos satelitales de temperatura...'):
+        temperature = load_temperature(lat_min, lat_max)
     
     _, col_mapa, _ = st.columns([1, 10, 1])
-   
     
     with col_mapa:
         col_logo, col_title = st.columns([1, 4])
         with col_logo:
-            image = Image.open('data/logo_vuelvealoceano.png')
-            st.image(image, use_column_width=True,)
+            plot_logo()
 
         col_title.title('Monitoreo de mamíferos marinos en las localidades de Huiro y Chaihuin')
         col_title.caption('Proyecto financiado por TNC Chile, GORE Los Ríos y ONG Vuelve Al Océano.')
@@ -89,10 +92,10 @@ reportados por vecinos y vecinas de las localidades, fueron comunicados a travé
                 if len(df_avistamientos.query('Fecha==@start_date_barco')) == 0 and start_date_barco != "Todas las fechas":
                     st.warning('No hay avistamientos en la fecha seleccionada')
                 elif start_date_barco == "Todas las fechas":
-                    plot_mapa(df_mapa.query('time=="2025-01-01"'), rutas.query('date=="2023-03-22"'), df_avistamientos, var, diccionario_color)
+                    plot_mapa(df_mapa.query('time=="2025-01-01"'), rutas.query('date=="2023-03-22"'), df_avistamientos, var)
                 else:
-                    plot_mapa(df_mapa.query('time==@start_date_barco'), rutas.query('date==@start_date_barco'), df_avistamientos.query('Fecha==@start_date_barco'), var, diccionario_color)
-            #if start_date_barco != "Todas las fechas":
+                    plot_mapa(df_mapa.query('time==@start_date_barco'), rutas.query('date==@start_date_barco'), df_avistamientos.query('Fecha==@start_date_barco'), var)
+
             ploteamos_fotos(start_date_barco)
 
 
@@ -106,11 +109,14 @@ reportados por vecinos y vecinas de las localidades, fueron comunicados a travé
                     st.warning('No hay avistamientos en la fecha seleccionada')
                 else:
                     plot_conteo_directo(df_conteo_directo, start_date_orilla)
-            #if start_date_orilla != "Todas las fechas":
+
             ploteamos_fotos(start_date_orilla, folder='data/fotos_conteo_directo', sep=':')
 
 
-        
+
+def plot_logo() -> None:
+    image = Image.open('data/logo_vuelvealoceano.png')
+    st.image(image, use_column_width=True,)
 
 
 def filtro_fechas(df_avistamientos: pd.DataFrame, 
@@ -131,7 +137,8 @@ def filtro_fechas(df_avistamientos: pd.DataFrame,
 
 
 
-def get_correct_chilean_date(date: Union[str, pd.Timestamp], sep: str = '_') -> str:
+def get_correct_chilean_date(date: Union[str, pd.Timestamp], 
+                             sep: str = '_') -> str:
     """
     Converts a given date to the correct Chilean date format.
 
@@ -159,7 +166,9 @@ def get_correct_chilean_date(date: Union[str, pd.Timestamp], sep: str = '_') -> 
     return chilean_date
 
 
-def ploteamos_fotos(start_date: Union[str, pd.Timestamp], sep: str = '_', folder: str = 'data/fotos'):
+def ploteamos_fotos(start_date: Union[str, pd.Timestamp], 
+                    sep: str = '_', 
+                    folder: str = 'data/fotos'):
     """
     Plots photos of whale sightings based on the given start date.
 
@@ -194,7 +203,11 @@ def ploteamos_fotos(start_date: Union[str, pd.Timestamp], sep: str = '_', folder
 
 
 
-def conteo_especie_tiempo(df_avistamientos,  df_conteo_directo, width=800, height=400):
+def conteo_especie_tiempo(df_avistamientos: pd.DataFrame, 
+                          df_conteo_directo: pd.DataFrame, 
+                          width: int = 800, 
+                          height: int = 400) -> None:
+    
     df_toplot = pd.concat((df_avistamientos[['Fecha', 'Especie']].copy(), df_conteo_directo[['Fecha', 'Especie']].copy()), axis=0)
     df_number_avistamientos = df_toplot.groupby('Fecha').size().reset_index(name='counts')
     fig = px.bar(df_number_avistamientos, 
@@ -207,27 +220,28 @@ def conteo_especie_tiempo(df_avistamientos,  df_conteo_directo, width=800, heigh
     st.plotly_chart(fig)
     
 
-def plot_conteo_especies(df_avistamientos, df_conteo_directo, width=800, height=400):
+def plot_conteo_especies(df_avistamientos: pd.DataFrame, 
+                         df_conteo_directo: pd.DataFrame, 
+                         width: int = 800, 
+                         height: int = 400):
     
-    #st.write(df_avistamientos.head(1))
-    #st.write(df_conteo_directo.head(1))
     df_toplot = pd.concat((df_avistamientos['Especie'].copy(), df_conteo_directo['Especie'].copy()), axis=0)
     df_toplot = df_toplot.apply(lambda x: x.split(' (')[0])
     species_counts = df_toplot.value_counts()
     fig = px.bar(species_counts, 
-                 #y=species_counts.values[0], 
-                 #x=species_counts.index, 
                  labels={'x':'Species', 'y':'Count'}, 
                  title='Número de avistamientos por especie',
                  width=width, height=height)
     fig.update_layout(showlegend=False)
-    #update xaxis name
     fig.update_xaxes(title_text='Especies')
     fig.update_yaxes(title_text='Conteo')
     st.plotly_chart(fig)
 
 
-def plot_mapa(dataf, ruta, df_avistamientos, variable, diccionario_color):
+def plot_mapa(dataf: pd.DataFrame, 
+              ruta: gpd.GeoDataFrame, 
+              df_avistamientos: pd.DataFrame, 
+              variable: str) -> None:
 
     color_range = {'temperature': [
         [255, 255, 204],  # Light Yellow
@@ -262,14 +276,13 @@ def plot_mapa(dataf, ruta, df_avistamientos, variable, diccionario_color):
 
     bins = np.linspace(dataf[variable].min(), dataf[variable].max(), len(color_range))
 
-    def color_scale(val):
+    def color_scale(val: float) -> List[int]:
         for i, b in enumerate(bins):
             if val < b:
                 return color_range[i]
         return color_range[i]
 
     dataf["fill_color"] = dataf[variable].apply(lambda row: color_scale(row))
-
 
     layers = [
         pdk.Layer(
@@ -466,7 +479,7 @@ def create_geodataframe(date, coordinates):
     return gdf
 
 
-def merge_gdfs(gpx_files):
+def merge_gdfs(gpx_files: List[str]) -> gpd.GeoDataFrame:
     gdfs = []
     for file in gpx_files:
         date = file.split('/')[-1].split('.')[0].replace(':','/')
@@ -475,10 +488,32 @@ def merge_gdfs(gpx_files):
         month = date.split('/')[1]
         gdfs.append(create_geodataframe(date=f'{year}/{month}/{day}', coordinates=parse_gpx(file)))
 
-    return pd.concat(gdfs)
+    return gpd.GeoDataFrame(pd.concat(gdfs))
 
 
-def parse_gpx(file_path):
+def create_geodataframe(date: str, coordinates: List[List[float]]) -> gpd.GeoDataFrame:
+    new_coordinates = [(coord[1], coord[0]) for coord in coordinates]
+    
+    line = [LineString(new_coordinates)]
+    gdf = gpd.GeoDataFrame(geometry=line)
+    gdf = gdf.assign(date=date)
+    date_format = '%d/%m/%Y'
+    gdf['date'] = gdf['date'].apply(pd.to_datetime,)# format=date_format)
+    
+    return gdf
+
+def parse_gpx(file_path: str) -> List[List[float]]:
+    with open(file_path, 'r') as gpx_file:
+        gpx = gpxpy.parse(gpx_file)
+    data = []
+    for track in gpx.tracks:
+        for segment in track.segments:
+            for point in segment.points:
+                data.append([point.latitude, point.longitude])
+    return data
+
+
+def parse_gpx(file_path: str) -> List[List[float]]:
     with open(file_path, 'r') as gpx_file:
         gpx = gpxpy.parse(gpx_file)
 
@@ -528,9 +563,6 @@ def load_datos_avistamientos_orilla():
     df['text'] = df.apply(lambda row: f"- {row['Especie_short']}: ({row['Numero']} ejemplares)  {row['Observaciones']}", axis=1)
 
     return df
-
-
-
 
 
 if __name__ == "__main__":
