@@ -16,8 +16,6 @@ import gpxpy
 import glob
 from datetime import datetime
 from typing import Union, List
-from typing import List
-from typing import List
 
 
 
@@ -458,8 +456,21 @@ def plot_conteo_directo(df_conteo_directo, fecha, width=800, height=400):
     
     
     
-def crop_map(df, lat_min, lat_max, variable='temperature', agg='mean'):
-    
+def crop_map(df: pd.DataFrame, lat_min: float, lat_max: float, variable: str = 'temperature', agg: str = 'mean') -> pd.DataFrame:
+    """
+    Crop the map data based on latitude range and perform aggregation on the specified variable.
+
+    Parameters:
+    - df (DataFrame): The input DataFrame containing map data.
+    - lat_min (float): The minimum latitude value for cropping.
+    - lat_max (float): The maximum latitude value for cropping.
+    - variable (str, optional): The variable to be aggregated. Defaults to 'temperature'.
+    - agg (str, optional): The aggregation method to be used. Defaults to 'mean'.
+
+    Returns:
+    - df (DataFrame): The cropped and aggregated DataFrame.
+
+    """
     min_depth = df.depth.min()
     df = df.query(f'latitude >= {lat_min} and latitude <= {lat_max}')
     if variable == 'temperature':
@@ -475,8 +486,18 @@ def crop_map(df, lat_min, lat_max, variable='temperature', agg='mean'):
     return df
 
 
-def create_grid(temperature, grid_size = 0.08):
-    
+def create_grid(temperature: pd.DataFrame, grid_size: float = 0.08) -> gpd.GeoDataFrame:
+    """
+    Create a grid based on temperature data.
+
+    Parameters:
+    - temperature (DataFrame): A DataFrame containing temperature data.
+    - grid_size (float, optional): The size of each grid cell. Defaults to 0.08.
+
+    Returns:
+    - GeoDataFrame: A GeoDataFrame with the temperature data and the created grid.
+
+    """
     temperature['geometry'] = temperature.apply(lambda row: MultiPoint([(row['longitude'] - grid_size / 2, row['latitude'] - grid_size / 2), 
                                                                         (row['longitude'] + grid_size / 2, row['latitude'] - grid_size / 2), 
                                                                         (row['longitude'] + grid_size / 2, row['latitude'] + grid_size / 2), 
@@ -486,8 +507,18 @@ def create_grid(temperature, grid_size = 0.08):
 
 
 @st.cache_data()
-def load_temperature(lat_min, lat_max):
+def load_temperature(lat_min: float, lat_max: float) -> pd.DataFrame:
+    """
+    Load temperature data and perform cropping and grid creation.
 
+    Args:
+        lat_min (float): The minimum latitude value for cropping.
+        lat_max (float): The maximum latitude value for cropping.
+
+    Returns:
+        pd.DataFrame: The processed temperature data.
+
+    """
     temperature = pd.read_parquet('data/temperature.parquet')
     temperature = temperature.pipe(crop_map, lat_min, lat_max, variable='temperature').pipe(create_grid, grid_size=0.08)
     temperature['temperature'] = temperature['temperature'].round(1)
@@ -497,8 +528,7 @@ def load_temperature(lat_min, lat_max):
 
 
 @st.cache_data()
-def load_chlorophyll(lat_min, lat_max):
-    
+def load_chlorophyll(lat_min: float, lat_max: float) -> pd.DataFrame:
     chlorophyll = pd.read_parquet('data/chlorophyll.parquet')
     chlorophyll = chlorophyll.pipe(crop_map, lat_min, lat_max, variable='chlorophyll').pipe(create_grid, grid_size=0.2)
     chlorophyll['chlorophyll'] = chlorophyll['chlorophyll'].round(1)
@@ -519,7 +549,17 @@ def load_ruta() -> gpd.GeoDataFrame:
     return ruta
 
 
-def create_geodataframe(date, coordinates):
+def create_geodataframe(date: str, coordinates: List[List[float]]) -> gpd.GeoDataFrame:
+    """
+    Create a GeoDataFrame from a given date and coordinates.
+
+    Args:
+        date (str): The date in string format.
+        coordinates (List[List[float]]): List of coordinates in the format [[lat1, lon1], [lat2, lon2], ...].
+
+    Returns:
+        gpd.GeoDataFrame: A GeoDataFrame containing the line geometry and the date column.
+    """
     new_coordinates = [(coord[1], coord[0]) for coord in coordinates]
     
     line = [LineString(new_coordinates)]
@@ -533,6 +573,16 @@ def create_geodataframe(date, coordinates):
 
 
 def merge_gdfs(gpx_files: List[str]) -> gpd.GeoDataFrame:
+    """
+    Merge multiple GeoDataFrames created from GPX files into a single GeoDataFrame.
+
+    Args:
+        gpx_files (List[str]): A list of file paths to GPX files.
+
+    Returns:
+        gpd.GeoDataFrame: A merged GeoDataFrame containing the data from all the GPX files.
+
+    """
     gdfs = []
     for file in gpx_files:
         date = file.split('/')[-1].split('.')[0].replace(':','/')
@@ -545,6 +595,16 @@ def merge_gdfs(gpx_files: List[str]) -> gpd.GeoDataFrame:
 
 
 def create_geodataframe(date: str, coordinates: List[List[float]]) -> gpd.GeoDataFrame:
+    """
+    Create a GeoDataFrame from a given date and coordinates.
+    
+    Args:
+        date (str): The date in string format (e.g., 'dd/mm/yyyy').
+        coordinates (List[List[float]]): A list of coordinates in the format [[lat1, lon1], [lat2, lon2], ...].
+    
+    Returns:
+        gpd.GeoDataFrame: A GeoDataFrame containing a LineString geometry and the given date.
+    """
     new_coordinates = [(coord[1], coord[0]) for coord in coordinates]
     
     line = [LineString(new_coordinates)]
@@ -556,6 +616,15 @@ def create_geodataframe(date: str, coordinates: List[List[float]]) -> gpd.GeoDat
     return gdf
 
 def parse_gpx(file_path: str) -> List[List[float]]:
+    """
+    Parses a GPX file and extracts latitude and longitude data from it.
+
+    Args:
+        file_path (str): The path to the GPX file.
+
+    Returns:
+        List[List[float]]: A list of lists containing latitude and longitude data.
+    """
     with open(file_path, 'r') as gpx_file:
         gpx = gpxpy.parse(gpx_file)
     data = []
@@ -566,22 +635,21 @@ def parse_gpx(file_path: str) -> List[List[float]]:
     return data
 
 
-def parse_gpx(file_path: str) -> List[List[float]]:
-    with open(file_path, 'r') as gpx_file:
-        gpx = gpxpy.parse(gpx_file)
-
-    data = []
-    for track in gpx.tracks:
-        for segment in track.segments:
-            for point in segment.points:
-                data.append([point.latitude, point.longitude])
-
-    return data
 
 
 
 @st.cache_data()
 def load_datos_avistamientos():
+    """
+    Load and process avistamientos data.
+
+    Reads the avistamientos data from an Excel file, performs data cleaning and preprocessing,
+    and returns the processed DataFrame along with a dictionary mapping species to colors.
+
+    Returns:
+        df (pandas.DataFrame): Processed avistamientos data.
+        species_color (dict): Dictionary mapping species to colors.
+    """
     df = pd.read_excel('data/datos_avistamientos.xlsx')
     df.columns = [col.strip() for col in df.columns]
     df.rename(columns={'Latitud': 'latitude', 'Longitud': 'longitude'}, inplace=True)
@@ -601,6 +669,12 @@ def load_datos_avistamientos():
 
 @st.cache_data()
 def load_datos_avistamientos_orilla():
+    """
+    Loads avistamientos orilla data from an Excel file and performs data processing.
+
+    Returns:
+        df (GeoDataFrame): Processed avistamientos orilla data.
+    """
     df = pd.read_excel('data/Planilla conteo directo .xlsx', skiprows=1)
     zonas = {1: Polygon(zona_1['coordinates'][0]), 2: Polygon(zona_2['coordinates'][0]), 3: Polygon(zona_3['coordinates'][0]), 4: Polygon(zona_4['coordinates'][0])}
     df.columns = [col.strip() for col in df.columns]
