@@ -1,0 +1,7 @@
+fastapi>=0.115
+uvicorn>=0.32
+pandas>=2.2
+pyarrow>=17
+openpyxl>=3.1
+gpxpy>=1.6
+numpy>=2.0
