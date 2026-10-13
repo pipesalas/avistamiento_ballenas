@@ -1,14 +1,14 @@
 node_modules/
 frontend/dist/
-__pycache__/
-*.pyc
-
-node_modules/
-frontend/dist/
+frontend/.vite/
 __pycache__/
 api/__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+~$*
 data/Planilla conteo directo .numbers
 data/Planilla Datos total terrenos .numbers
-__pycache__/config.cpython-39.pyc
 data/.DS_Store
 .DS_Store

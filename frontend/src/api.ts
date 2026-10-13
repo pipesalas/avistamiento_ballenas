@@ -69,6 +69,13 @@ export interface SeasonRow {
   individuals: number;
 }
 
+export interface TimelineRow {
+  date: string;
+  source: string;
+  events: number;
+  individuals: number;
+}
+
 export interface BehaviorRow {
   species: string;
   species_short: string;
@@ -129,6 +136,18 @@ export function getSeasonality(source = "both", species?: string) {
   const params = new URLSearchParams({ source });
   if (species) params.set("species", species);
   return getJson<SeasonRow[]>(`/api/stats/seasonality?${params}`);
+}
+
+export function getTimeline(source = "both", grain: "day" | "month" = "day", species?: string) {
+  const params = new URLSearchParams({ source, grain });
+  if (species) params.set("species", species);
+  return getJson<TimelineRow[]>(`/api/stats/timeline?${params}`);
+}
+
+export function sightingsCsvUrl(query: Record<string, string> = {}): string {
+  const params = new URLSearchParams(query);
+  const qs = params.toString();
+  return `/api/sightings.csv${qs ? `?${qs}` : ""}`;
 }
 
 export function getBehavior(species?: string) {

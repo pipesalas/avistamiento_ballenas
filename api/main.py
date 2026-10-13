@@ -5,7 +5,7 @@ from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from api.store import ROOT, get_store
@@ -75,6 +75,24 @@ def sightings(
     behavior: str | None = None,
 ) -> dict:
     return get_store().sightings(source, date, date_from, date_to, species, behavior)
+
+
+@app.get("/api/sightings.csv")
+def sightings_csv(
+    source: SourceType = Query("both"),
+    date: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    species: str | None = None,
+    behavior: str | None = None,
+) -> Response:
+    csv_text = get_store().sightings_csv(source, date, date_from, date_to, species, behavior)
+    filename = f"avistamientos_{species or 'todos'}_{date or 'historico'}.csv"
+    return Response(
+        content=csv_text,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @app.get("/api/shore-zones")

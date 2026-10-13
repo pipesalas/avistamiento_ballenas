@@ -1,14 +1,28 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
-import { getBehavior, getMeta, getSeasonality, getSpeciesStats, type BehaviorRow, type Meta, type SeasonRow, type Species } from "../api";
+import {
+  getBehavior,
+  getMeta,
+  getSeasonality,
+  getSpeciesStats,
+  getTimeline,
+  sightingsCsvUrl,
+  type BehaviorRow,
+  type Meta,
+  type SeasonRow,
+  type Species,
+  type TimelineRow,
+} from "../api";
 import BehaviorChart from "../components/BehaviorChart.vue";
 import SeasonChart from "../components/SeasonChart.vue";
 import SpeciesChart from "../components/SpeciesChart.vue";
+import TimelineChart from "../components/TimelineChart.vue";
 
 const meta = ref<Meta | null>(null);
 const species = ref<Species[]>([]);
 const season = ref<SeasonRow[]>([]);
+const timeline = ref<TimelineRow[]>([]);
 const behavior = ref<BehaviorRow[]>([]);
 const error = ref("");
 const loading = ref(true);
@@ -27,15 +41,17 @@ const totalIndividuals = computed(() => {
 
 onMounted(async () => {
   try {
-    const [metaValue, speciesValue, seasonValue, behaviorValue] = await Promise.all([
+    const [metaValue, speciesValue, seasonValue, timelineValue, behaviorValue] = await Promise.all([
       getMeta(),
       getSpeciesStats("both"),
       getSeasonality("both"),
+      getTimeline("both", "day"),
       getBehavior(),
     ]);
     meta.value = metaValue;
     species.value = speciesValue;
     season.value = seasonValue;
+    timeline.value = timelineValue;
     behavior.value = behaviorValue;
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : "No se pudo cargar el resumen";
@@ -67,7 +83,10 @@ onMounted(async () => {
           permanecen? El monitoreo, desde 2022, combina navegaciones del equipo y reportes de vecinos y vecinas por
           WhatsApp.
         </p>
-        <RouterLink class="cta" to="/">Ver el mapa</RouterLink>
+        <div class="hero-actions">
+          <RouterLink class="cta" to="/">Ver el mapa</RouterLink>
+          <a class="cta secondary" :href="sightingsCsvUrl()" download>Descargar base completa (CSV)</a>
+        </div>
       </section>
       <section class="kpi-grid" aria-label="Indicadores generales">
         <div class="kpi-card">
@@ -95,6 +114,11 @@ onMounted(async () => {
         <h2>Ejemplares por especie</h2>
         <p class="note">Barco y orilla por separado. Un clic abre la ficha de la especie.</p>
         <SpeciesChart :rows="species" />
+      </section>
+      <section class="panel">
+        <h2>Línea de tiempo por salida</h2>
+        <p class="note">Usa la barra inferior o la rueda del mouse para hacer zoom. Un clic en una fecha la abre en el mapa.</p>
+        <TimelineChart :rows="timeline" />
       </section>
       <section class="panel">
         <h2>Estacionalidad</h2>

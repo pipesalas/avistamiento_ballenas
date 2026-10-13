@@ -134,6 +134,39 @@ class DataStore:
         }
         self._temp_days = set(self._temp_by_day.keys())
         self._chl_days = set(self._chl_by_day.keys())
+        self._enrich_boat_environment()
+
+    def _enrich_boat_environment(self) -> None:
+        sst_values: list[float | None] = []
+        chl_values: list[float | None] = []
+        for row in self.boat.itertuples(index=False):
+            day = str(row.day)
+            lat = float(row.latitude)
+            lon = float(row.longitude)
+            sst: float | None = None
+            chl: float | None = None
+
+            temp_day = self._temp_by_day.get(day)
+            if temp_day is not None and not temp_day.empty:
+                surface = temp_day[np.isclose(temp_day["depth"], self.min_depth)].dropna(subset=["temperature"])
+                if not surface.empty:
+                    dist2 = (surface["latitude"] - lat) ** 2 + (surface["longitude"] - lon) ** 2
+                    nearest = surface.loc[dist2.idxmin()]
+                    sst = round(float(nearest["temperature"]), 1)
+
+            chl_day = self._chl_by_day.get(day)
+            if chl_day is not None and not chl_day.empty:
+                valid_chl = chl_day.dropna(subset=["chlorophyll"])
+                if not valid_chl.empty:
+                    dist2 = (valid_chl["latitude"] - lat) ** 2 + (valid_chl["longitude"] - lon) ** 2
+                    nearest = valid_chl.loc[dist2.idxmin()]
+                    chl = round(float(nearest["chlorophyll"]), 2)
+
+            sst_values.append(sst)
+            chl_values.append(chl)
+
+        self.boat["sst_c"] = sst_values
+        self.boat["chlorophyll"] = chl_values
 
     def _load_boat(self) -> pd.DataFrame:
         frame = pd.read_excel(self.root / "data" / "datos_avistamientos.xlsx")
@@ -324,12 +357,18 @@ class DataStore:
                 behavior = row.get("behavior")
                 distance = row.get("distance_m")
                 distance_m = None if distance is None or pd.isna(distance) else float(distance)
+                sst = row.get("sst_c")
+                sst_c = None if sst is None or pd.isna(sst) else float(sst)
+                chl = row.get("chlorophyll")
+                chlorophyll = None if chl is None or pd.isna(chl) else float(chl)
             else:
                 ring = ZONES[int(row["subzone"])]["coordinates"][0]
                 coordinates = _centroid(ring)
                 subzone = int(row["subzone"])
                 behavior = None
                 distance_m = None
+                sst_c = None
+                chlorophyll = None
             features.append(
                 {
                     "type": "Feature",
@@ -347,10 +386,46 @@ class DataStore:
                         "hour": row["hour"],
                         "distance_m": distance_m,
                         "subzone": subzone,
+                        "sst_c": sst_c,
+                        "chlorophyll": chlorophyll,
                     },
                 }
             )
         return {"type": "FeatureCollection", "features": features}
+
+    def sightings_csv(
+        self,
+        source: str = "both",
+        date: str | None = None,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        species: str | None = None,
+        behavior: str | None = None,
+    ) -> str:
+        collection = self.sightings(source, date, date_from, date_to, species, behavior)
+        rows = []
+        for feature in collection["features"]:
+            props = feature["properties"]
+            coords = feature["geometry"]["coordinates"]
+            rows.append(
+                {
+                    "fecha": props["date"],
+                    "hora": props["hour"],
+                    "fuente": props["source"],
+                    "especie": props["species"],
+                    "especie_corto": props["species_short"],
+                    "individuos": props["individuals"],
+                    "comportamiento": props["behavior"] or "",
+                    "subzona": props["subzone"] or "",
+                    "longitud": coords[0],
+                    "latitud": coords[1],
+                    "temperatura_superficie_c": "" if props["sst_c"] is None else props["sst_c"],
+                    "clorofila_mg_m3": "" if props["chlorophyll"] is None else props["chlorophyll"],
+                    "observaciones": props["notes"] or "",
+                }
+            )
+        df = pd.DataFrame(rows)
+        return df.to_csv(index=False)
 
     def shore_zones(
         self,

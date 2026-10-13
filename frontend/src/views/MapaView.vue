@@ -11,6 +11,7 @@ import {
   getSightings,
   getSpeciesStats,
   getTracks,
+  sightingsCsvUrl,
   type BehaviorRow,
   type FeatureCollection,
   type Meta,
@@ -33,6 +34,7 @@ const variable = ref(String(route.query.variable ?? "temperature"));
 const depth = ref(String(route.query.depth ?? "surface"));
 const date = ref(String(route.query.date ?? ""));
 const seaOn = ref(route.query.sea === "1");
+const heatmap = ref(route.query.heatmap === "1");
 const environment = ref<FeatureCollection | null>(null);
 const tracks = ref<FeatureCollection | null>(null);
 const zones = ref<FeatureCollection | null>(null);
@@ -68,6 +70,13 @@ const previousDay = computed(() => {
 const showEmpty = computed(
   () => ready.value && !loading.value && !!date.value && (sightings.value?.features.length ?? 0) === 0,
 );
+const csvHref = computed(() => {
+  const query: Record<string, string> = { source: source.value };
+  if (date.value) query.date = date.value;
+  if (species.value) query.species = species.value;
+  if (behavior.value && source.value === "boat" && species.value) query.behavior = behavior.value;
+  return sightingsCsvUrl(query);
+});
 
 function datesFor(next: "boat" | "shore") {
   if (!meta.value) return [];
@@ -79,6 +88,7 @@ function syncQuery() {
   if (date.value) query.date = date.value;
   if (species.value) query.species = species.value;
   if (behavior.value && source.value === "boat" && species.value) query.behavior = behavior.value;
+  if (heatmap.value && source.value === "boat") query.heatmap = "1";
   if (seaOn.value) {
     query.sea = "1";
     query.variable = variable.value;
@@ -212,7 +222,7 @@ onMounted(async () => {
   }
 });
 
-watch([source, species, behavior, variable, depth, date, seaOn], () => {
+watch([source, species, behavior, variable, depth, date, seaOn, heatmap], () => {
   if (!ready.value) return;
   syncQuery();
   load();
@@ -256,6 +266,16 @@ watch([source, species, behavior, variable, depth, date, seaOn], () => {
             />
           </div>
           <button type="button" class="layer-toggle" :class="{ active: seaOn }" @click="toggleSea">Capa del mar</button>
+          <button
+            v-if="source === 'boat'"
+            type="button"
+            class="layer-toggle"
+            :class="{ active: heatmap }"
+            @click="heatmap = !heatmap"
+          >
+            Mapa de calor
+          </button>
+          <a :href="csvHref" download class="layer-toggle link-chip">Descargar CSV</a>
           <span v-if="loading" class="note">Cargando…</span>
           <span v-else-if="sightings" class="note">
             {{ sightings.features.length }} avistamientos
@@ -301,6 +321,7 @@ watch([source, species, behavior, variable, depth, date, seaOn], () => {
         :zones="source === 'shore' ? zones : null"
         :sightings="source === 'boat' ? sightings : null"
         :fit="!!date"
+        :heatmap="source === 'boat' && heatmap"
       />
       <p v-if="showEmpty" class="map-empty">
         Este día no hay avistamientos con este filtro.

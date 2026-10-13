@@ -97,6 +97,39 @@ nav a.router-link-active {
   text-decoration: none;
 }
 
+.cta.secondary {
+  background: var(--chip);
+  color: var(--ink);
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.link-chip {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.photo-link,
+.photo-date-link,
+.row-date-link {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.clickable-row {
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.clickable-row:hover {
+  background: var(--green-soft);
+}
+
 .page {
   width: min(1120px, calc(100% - 40px));
   margin: 28px auto 64px;

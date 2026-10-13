@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import maplibregl, { type GeoJSONSource, type LngLatBounds, type Map } from "maplibre-gl";
+import maplibregl, { type GeoJSONSource, type LngLatBounds, type Map, type Popup } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import type { FeatureCollection } from "../api";
@@ -10,12 +10,21 @@ const props = defineProps<{
   zones: FeatureCollection | null;
   sightings: FeatureCollection | null;
   fit?: boolean;
+  heatmap?: boolean;
 }>();
 
 const empty: FeatureCollection = { type: "FeatureCollection", features: [] };
 const el = ref<HTMLDivElement | null>(null);
 let map: Map | null = null;
+let activePopup: Popup | null = null;
 let ready = false;
+
+function flyToPoint(lon: number, lat: number) {
+  if (!map || !ready) return;
+  map.flyTo({ center: [lon, lat], zoom: 13.2, duration: 600 });
+}
+
+defineExpose({ flyToPoint });
 
 function asGeoJson(data: FeatureCollection | null) {
   return (data ?? empty) as Parameters<GeoJSONSource["setData"]>[0];
@@ -50,10 +59,18 @@ function focusOnObservations() {
 
 function sync() {
   if (!ready) return;
+  activePopup?.remove();
+  activePopup = null;
   setSource("environment", props.environment);
   setSource("tracks", props.tracks);
   setSource("zones", props.zones);
   setSource("sightings", props.sightings);
+  if (map?.getLayer("sightings-heat")) {
+    map.setLayoutProperty("sightings-heat", "visibility", props.heatmap ? "visible" : "none");
+  }
+  if (map?.getLayer("sightings")) {
+    map.setLayoutProperty("sightings", "visibility", props.heatmap ? "none" : "visible");
+  }
   void nextTick(() => {
     map?.resize();
     focusOnObservations();
@@ -107,6 +124,21 @@ function buildPopupNode(
       const behaviorEl = document.createElement("div");
       behaviorEl.textContent = String(props.behavior);
       item.appendChild(behaviorEl);
+    }
+    const envParts: string[] = [];
+    if (props.sst_c !== undefined && props.sst_c !== null && props.sst_c !== "null") {
+      envParts.push(`${props.sst_c} °C`);
+    }
+    if (props.chlorophyll !== undefined && props.chlorophyll !== null && props.chlorophyll !== "null") {
+      envParts.push(`${props.chlorophyll} mg/m³`);
+    }
+    if (envParts.length) {
+      const envEl = document.createElement("div");
+      envEl.style.fontSize = "12px";
+      envEl.style.color = "#06c167";
+      envEl.style.fontWeight = "700";
+      envEl.textContent = `Mar: ${envParts.join(" · ")}`;
+      item.appendChild(envEl);
     }
     if (props.notes && props.notes !== "null") {
       const notesEl = document.createElement("div");
@@ -174,9 +206,37 @@ onMounted(() => {
     });
     map.addSource("sightings", { type: "geojson", data: asGeoJson(null) });
     map.addLayer({
+      id: "sightings-heat",
+      type: "heatmap",
+      source: "sightings",
+      layout: { visibility: props.heatmap ? "visible" : "none" },
+      paint: {
+        "heatmap-weight": ["interpolate", ["linear"], ["coalesce", ["get", "individuals"], 1], 1, 0.3, 20, 1],
+        "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 8, 1, 13, 2.5],
+        "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 8, 14, 13, 30],
+        "heatmap-opacity": 0.8,
+        "heatmap-color": [
+          "interpolate",
+          ["linear"],
+          ["heatmap-density"],
+          0,
+          "rgba(6, 193, 103, 0)",
+          0.2,
+          "rgba(142, 224, 176, 0.65)",
+          0.5,
+          "rgba(6, 193, 103, 0.85)",
+          0.8,
+          "rgba(11, 61, 36, 0.92)",
+          1,
+          "#000000",
+        ],
+      },
+    });
+    map.addLayer({
       id: "sightings",
       type: "circle",
       source: "sightings",
+      layout: { visibility: props.heatmap ? "none" : "visible" },
       paint: {
         "circle-color": ["get", "color"],
         "circle-stroke-color": [
@@ -202,7 +262,8 @@ onMounted(() => {
       map?.on("click", layer, (event) => {
         const features = event.features;
         if (!features?.length || !map) return;
-        new maplibregl.Popup({ maxWidth: "300px" })
+        activePopup?.remove();
+        activePopup = new maplibregl.Popup({ maxWidth: "300px" })
           .setLngLat(event.lngLat)
           .setDOMContent(buildPopupNode(features, kind))
           .addTo(map);
@@ -222,7 +283,7 @@ onMounted(() => {
   });
 });
 
-watch(() => [props.environment, props.tracks, props.zones, props.sightings, props.fit], sync);
+watch(() => [props.environment, props.tracks, props.zones, props.sightings, props.fit, props.heatmap], sync);
 onBeforeUnmount(() => {
   map?.remove();
   map = null;

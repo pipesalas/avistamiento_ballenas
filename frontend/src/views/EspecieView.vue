@@ -9,6 +9,7 @@ import {
   getSeasonality,
   getShoreZones,
   getSightings,
+  sightingsCsvUrl,
   type BehaviorRow,
   type FeatureCollection,
   type Meta,
@@ -30,6 +31,7 @@ const photos = ref<Photo[]>([]);
 const error = ref("");
 const loaded = ref(false);
 const tableFilter = ref<"all" | "boat" | "shore">("all");
+const mapRef = ref<InstanceType<typeof SightingMap> | null>(null);
 let requestId = 0;
 
 const species = computed(() => meta.value?.species.find((item) => item.slug === props.slug) ?? null);
@@ -40,6 +42,21 @@ const sortedSightings = computed(() => {
     .filter((f) => tableFilter.value === "all" || f.properties?.source === tableFilter.value)
     .sort((a, b) => String(b.properties?.date ?? "").localeCompare(String(a.properties?.date ?? "")));
 });
+
+function focusFeature(feature: { geometry: { coordinates: unknown } }) {
+  const coords = feature.geometry.coordinates;
+  if (Array.isArray(coords) && typeof coords[0] === "number" && typeof coords[1] === "number") {
+    mapRef.value?.flyToPoint(coords[0], coords[1]);
+  }
+}
+
+function formatOcean(propsObj?: Record<string, unknown> | null): string {
+  if (!propsObj) return "—";
+  const parts: string[] = [];
+  if (propsObj.sst_c !== null && propsObj.sst_c !== undefined) parts.push(`${propsObj.sst_c} °C`);
+  if (propsObj.chlorophyll !== null && propsObj.chlorophyll !== undefined) parts.push(`${propsObj.chlorophyll} mg/m³`);
+  return parts.length ? parts.join(" · ") : "—";
+}
 
 async function load() {
   const id = ++requestId;
@@ -86,7 +103,10 @@ watch(() => props.slug, load);
         {{ species.short }}
       </h1>
       <p class="lead">{{ species.name }}</p>
-      <RouterLink class="cta" :to="{ path: '/', query: { species: species.slug } }">Ver en el mapa</RouterLink>
+      <div class="hero-actions">
+        <RouterLink class="cta" :to="{ path: '/', query: { species: species.slug } }">Ver en el mapa</RouterLink>
+        <a class="cta secondary" :href="sightingsCsvUrl({ species: species.slug })" download>Descargar CSV</a>
+      </div>
       <section class="panel">
         <h2>Fotos</h2>
         <p v-if="!loaded" class="note">Cargando…</p>
@@ -96,7 +116,15 @@ watch(() => props.slug, load);
         <h2>Dónde se vio</h2>
         <p class="note">Puntos con borde blanco corresponden a salidas en barco; polígonos y puntos con borde negro a subzonas de orilla.</p>
         <div class="species-map">
-          <SightingMap v-if="loaded" :environment="null" :tracks="null" :zones="zones" :sightings="sightings" :fit="true" />
+          <SightingMap
+            v-if="loaded"
+            ref="mapRef"
+            :environment="null"
+            :tracks="null"
+            :zones="zones"
+            :sightings="sightings"
+            :fit="true"
+          />
         </div>
       </section>
       <section class="panel">
@@ -108,19 +136,41 @@ watch(() => props.slug, load);
             <button type="button" :class="{ active: tableFilter === 'shore' }" @click="tableFilter = 'shore'">Orilla</button>
           </div>
         </div>
+        <p class="note">Haz clic en una fila para enfocar el punto arriba, o en la fecha para abrir ese día en el mapa principal.</p>
         <div class="table-scroll">
-          <table class="table">
+          <table class="table interactive-table">
             <thead>
               <tr>
                 <th>Fecha</th>
                 <th>Fuente</th>
                 <th>Ejemplares</th>
+                <th>Condición del mar</th>
                 <th>Comportamiento / Notas</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(feature, index) in sortedSightings" :key="index">
-                <td>{{ formatDate(String(feature.properties?.date)) }}</td>
+              <tr
+                v-for="(feature, index) in sortedSightings"
+                :key="index"
+                class="clickable-row"
+                @click="focusFeature(feature)"
+              >
+                <td>
+                  <RouterLink
+                    :to="{
+                      path: '/',
+                      query: {
+                        source: String(feature.properties?.source ?? 'boat'),
+                        date: String(feature.properties?.date ?? ''),
+                        species: species.slug,
+                      },
+                    }"
+                    class="row-date-link"
+                    @click.stop
+                  >
+                    {{ formatDate(String(feature.properties?.date)) }}
+                  </RouterLink>
+                </td>
                 <td>
                   {{
                     feature.properties?.source === "boat"
@@ -129,6 +179,7 @@ watch(() => props.slug, load);
                   }}
                 </td>
                 <td>{{ feature.properties?.individuals }}</td>
+                <td>{{ formatOcean(feature.properties) }}</td>
                 <td>{{ feature.properties?.behavior || feature.properties?.notes || "—" }}</td>
               </tr>
             </tbody>
