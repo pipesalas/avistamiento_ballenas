@@ -126,8 +126,14 @@ class DataStore:
         self.depths = sorted(float(value) for value in self.temperature["depth"].unique())
         self.species = self._build_species()
         self.by_slug = {item["slug"]: item for item in self.species}
-        self._temp_days = set(self.temperature["day"].unique())
-        self._chl_days = set(self.chlorophyll["day"].unique())
+        self._temp_by_day: dict[str, pd.DataFrame] = {
+            str(day): group for day, group in self.temperature.groupby("day")
+        }
+        self._chl_by_day: dict[str, pd.DataFrame] = {
+            str(day): group for day, group in self.chlorophyll.groupby("day")
+        }
+        self._temp_days = set(self._temp_by_day.keys())
+        self._chl_days = set(self._chl_by_day.keys())
 
     def _load_boat(self) -> pd.DataFrame:
         frame = pd.read_excel(self.root / "data" / "datos_avistamientos.xlsx")
@@ -162,11 +168,10 @@ class DataStore:
     def _load_tracks(self) -> list[dict]:
         tracks = []
         for path in sorted((self.root / "data" / "tracks").glob("*.gpx")):
-            parts = path.stem.split(":")
-            if len(parts) != 3:
+            match = DATE_IN_NAME.search(path.stem)
+            if not match:
                 continue
-            day, month, year = parts
-            date = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
+            date = f"{match.group('y')}-{match.group('m')}-{match.group('d')}"
             with path.open() as handle:
                 gpx = gpxpy.parse(handle)
             coordinates = []
@@ -232,6 +237,8 @@ class DataStore:
         behaviors = sorted({value for value in self.boat["behavior"].dropna().unique()})
         sighting_days = sorted(set(self.boat["day"]) | set(self.shore["day"]))
         env_days = sorted(self._temp_days | self._chl_days)
+        temp_ramp = [_hex(rgb) for rgb in TEMP_COLORS]
+        chl_ramp = [_hex(rgb) for rgb in CHL_COLORS]
         return {
             "project": {
                 "title": "Monitoreo de mamíferos marinos en las localidades de Huiro y Chaihuín",
@@ -250,6 +257,8 @@ class DataStore:
                 "shore_dates": sorted(set(self.shore["day"])),
                 "boat_count": int(len(self.boat)),
                 "shore_count": int(len(self.shore)),
+                "boat_individuals": int(self.boat["individuals"].sum()),
+                "shore_individuals": int(self.shore["individuals"].sum()),
             },
             "environment": {
                 "start": env_days[0] if env_days else None,
@@ -257,9 +266,9 @@ class DataStore:
                 "depths": [round(depth, 3) for depth in self.depths],
                 "surface_depth": round(self.min_depth, 3),
                 "variables": [
-                    {"id": "temperature", "label": "Temperatura", "unit": "°C"},
-                    {"id": "chlorophyll", "label": "Clorofila", "unit": "mg/m³"},
-                    {"id": "phyc", "label": "Fitoplancton", "unit": "mmol/m³"},
+                    {"id": "temperature", "label": "Temperatura", "unit": "°C", "ramp": temp_ramp},
+                    {"id": "chlorophyll", "label": "Clorofila", "unit": "mg/m³", "ramp": chl_ramp},
+                    {"id": "phyc", "label": "Fitoplancton", "unit": "mmol/m³", "ramp": chl_ramp},
                 ],
             },
         }
@@ -394,7 +403,7 @@ class DataStore:
 
     def environment(self, variable: str, date: str, depth: str = "surface") -> dict:
         if variable == "temperature":
-            day = self.temperature[self.temperature["day"] == date]
+            day = self._temp_by_day.get(date, self.temperature.iloc[0:0])
             unit = "°C"
             ramp = TEMP_COLORS
             grid = 0.08
@@ -408,7 +417,7 @@ class DataStore:
                 grouped = day[np.isclose(day["depth"].astype(float), float(depth), atol=0.02)]
                 column = "temperature"
         elif variable in ("chlorophyll", "phyc"):
-            day = self.chlorophyll[self.chlorophyll["day"] == date]
+            day = self._chl_by_day.get(date, self.chlorophyll.iloc[0:0])
             grouped = day.groupby(["latitude", "longitude"], as_index=False)[[variable]].mean()
             column = variable
             unit = "mg/m³" if variable == "chlorophyll" else "mmol/m³"

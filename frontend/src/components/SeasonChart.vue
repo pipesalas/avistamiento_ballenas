@@ -1,12 +1,18 @@
 <script setup lang="ts">
-import * as echarts from "echarts";
+import { HeatmapChart } from "echarts/charts";
+import { GridComponent, TooltipComponent, VisualMapComponent } from "echarts/components";
+import * as echarts from "echarts/core";
+import { CanvasRenderer } from "echarts/renderers";
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import type { SeasonRow } from "../api";
+
+echarts.use([HeatmapChart, GridComponent, TooltipComponent, VisualMapComponent, CanvasRenderer]);
 
 const props = defineProps<{ rows: SeasonRow[] }>();
 const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 const el = ref<HTMLDivElement | null>(null);
 let chart: echarts.ECharts | null = null;
+let observer: ResizeObserver | null = null;
 
 function render() {
   if (!chart) return;
@@ -58,16 +64,13 @@ onMounted(() => {
   if (!el.value) return;
   chart = echarts.init(el.value);
   render();
-  window.addEventListener("resize", resize);
+  observer = new ResizeObserver(() => chart?.resize());
+  observer.observe(el.value);
 });
-
-function resize() {
-  chart?.resize();
-}
 
 watch(() => props.rows, render);
 onBeforeUnmount(() => {
-  window.removeEventListener("resize", resize);
+  observer?.disconnect();
   chart?.dispose();
 });
 </script>

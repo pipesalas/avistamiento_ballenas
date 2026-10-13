@@ -42,6 +42,7 @@ const behaviorRows = ref<BehaviorRow[]>([]);
 const snappedNote = ref("");
 const loading = ref(false);
 const ready = ref(false);
+const legendCollapsed = ref(false);
 let requestId = 0;
 
 const empty: FeatureCollection = { type: "FeatureCollection", features: [] };
@@ -58,7 +59,7 @@ const speciesChips = computed(() =>
     }))
     .filter((item) => item.count > 0),
 );
-const scale = computed(() => rampFor(variable.value).join(", "));
+const scale = computed(() => rampFor(variable.value, meta.value).join(", "));
 const unit = computed(() => meta.value?.environment.variables.find((item) => item.id === variable.value)?.unit ?? "");
 const previousDay = computed(() => {
   const index = activeDates.value.indexOf(date.value);
@@ -233,13 +234,21 @@ watch([source, species, behavior, variable, depth, date, seaOn], () => {
           </div>
           <div class="timebar">
             <button type="button" aria-label="Día anterior" :disabled="!!date && date === activeDates[0]" @click="step(-1)">‹</button>
-            <button type="button" class="time-label" @click="date = ''">
-              {{ date ? formatDate(date) : "Todas las salidas" }}
-            </button>
+            <select
+              v-model="date"
+              class="time-select"
+              aria-label="Seleccionar fecha con registros"
+              @change="snappedNote = ''"
+            >
+              <option value="">Todas las salidas ({{ activeDates.length }})</option>
+              <option v-for="d in [...activeDates].reverse()" :key="d" :value="d">
+                {{ formatDate(d) }}
+              </option>
+            </select>
             <button type="button" aria-label="Día siguiente" :disabled="!date" @click="step(1)">›</button>
             <input
               type="date"
-              aria-label="Elegir fecha"
+              aria-label="Elegir fecha en calendario"
               :value="date"
               :min="meta?.sightings.start"
               :max="meta?.sightings.end"
@@ -248,7 +257,10 @@ watch([source, species, behavior, variable, depth, date, seaOn], () => {
           </div>
           <button type="button" class="layer-toggle" :class="{ active: seaOn }" @click="toggleSea">Capa del mar</button>
           <span v-if="loading" class="note">Cargando…</span>
-          <span v-else-if="sightings" class="note">{{ sightings.features.length }} avistamientos</span>
+          <span v-else-if="sightings" class="note">
+            {{ sightings.features.length }} avistamientos
+            <template v-if="source === 'shore' && zones"> · {{ zones.features.length }} subzonas</template>
+          </span>
         </div>
         <div v-if="seaOn" class="toolbar-row">
           <label class="field inline">
@@ -295,24 +307,37 @@ watch([source, species, behavior, variable, depth, date, seaOn], () => {
         <button v-if="previousDay" type="button" @click="date = previousDay">Ver {{ formatDate(previousDay) }}</button>
         <button v-if="species" type="button" @click="toggleSpecies(species)">Quitar especie</button>
       </p>
-      <aside class="legend" :class="{ raised: !!date }">
-        <template v-if="seaOn && date && environment?.properties">
-          <h3>{{ variable === "temperature" ? "Temperatura" : variable === "chlorophyll" ? "Clorofila" : "Fitoplancton" }}</h3>
-          <div class="scale" :style="{ background: `linear-gradient(90deg, ${scale})` }"></div>
-          <div>{{ environment.properties.min }} – {{ environment.properties.max }} {{ unit }}</div>
-        </template>
-        <h3>Especies</h3>
-        <button
-          v-for="item in speciesChips"
-          :key="item.slug"
-          type="button"
-          class="swatch"
-          :class="{ active: species === item.slug }"
-          @click="toggleSpecies(item.slug)"
-        >
-          <i :style="{ background: item.color }"></i>
-          <span>{{ item.short }} · {{ item.count }}</span>
-        </button>
+      <aside class="legend" :class="{ raised: !!date, collapsed: legendCollapsed }">
+        <div class="legend-header">
+          <strong>Leyenda y filtro</strong>
+          <button
+            type="button"
+            class="legend-toggle"
+            :aria-expanded="!legendCollapsed"
+            @click="legendCollapsed = !legendCollapsed"
+          >
+            {{ legendCollapsed ? "Mostrar" : "Ocultar" }}
+          </button>
+        </div>
+        <div v-show="!legendCollapsed" class="legend-body">
+          <template v-if="seaOn && date && environment?.properties">
+            <h3>{{ variable === "temperature" ? "Temperatura" : variable === "chlorophyll" ? "Clorofila" : "Fitoplancton" }}</h3>
+            <div class="scale" :style="{ background: `linear-gradient(90deg, ${scale})` }"></div>
+            <div>{{ environment.properties.min }} – {{ environment.properties.max }} {{ unit }}</div>
+          </template>
+          <h3>Especies</h3>
+          <button
+            v-for="item in speciesChips"
+            :key="item.slug"
+            type="button"
+            class="swatch"
+            :class="{ active: species === item.slug }"
+            @click="toggleSpecies(item.slug)"
+          >
+            <i :style="{ background: item.color }"></i>
+            <span>{{ item.short }} · {{ item.count }}</span>
+          </button>
+        </div>
       </aside>
       </div>
       <section v-if="date" class="photo-strip">

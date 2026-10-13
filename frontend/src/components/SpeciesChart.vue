@@ -1,13 +1,19 @@
 <script setup lang="ts">
-import * as echarts from "echarts";
+import { BarChart } from "echarts/charts";
+import { GridComponent, LegendComponent, TooltipComponent } from "echarts/components";
+import * as echarts from "echarts/core";
+import { CanvasRenderer } from "echarts/renderers";
 import { onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import type { Species } from "../api";
+
+echarts.use([BarChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer]);
 
 const props = defineProps<{ rows: Species[] }>();
 const el = ref<HTMLDivElement | null>(null);
 const router = useRouter();
 let chart: echarts.ECharts | null = null;
+let observer: ResizeObserver | null = null;
 
 function render() {
   if (!chart) return;
@@ -43,16 +49,13 @@ onMounted(() => {
     if (row) router.push(`/especies/${row.slug}`);
   });
   render();
-  window.addEventListener("resize", resize);
+  observer = new ResizeObserver(() => chart?.resize());
+  observer.observe(el.value);
 });
-
-function resize() {
-  chart?.resize();
-}
 
 watch(() => props.rows, render);
 onBeforeUnmount(() => {
-  window.removeEventListener("resize", resize);
+  observer?.disconnect();
   chart?.dispose();
 });
 </script>

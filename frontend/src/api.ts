@@ -22,13 +22,15 @@ export interface Meta {
     shore_dates: string[];
     boat_count: number;
     shore_count: number;
+    boat_individuals?: number;
+    shore_individuals?: number;
   };
   environment: {
     start: string;
     end: string;
     depths: number[];
     surface_depth: number;
-    variables: { id: string; label: string; unit: string }[];
+    variables: { id: string; label: string; unit: string; ramp?: string[] }[];
   };
 }
 
