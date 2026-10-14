@@ -74,7 +74,7 @@ const csvHref = computed(() => {
   const query: Record<string, string> = { source: source.value };
   if (date.value) query.date = date.value;
   if (species.value) query.species = species.value;
-  if (behavior.value && source.value === "boat" && species.value) query.behavior = behavior.value;
+  if (behavior.value && species.value) query.behavior = behavior.value;
   return sightingsCsvUrl(query);
 });
 
@@ -87,8 +87,8 @@ function syncQuery() {
   const query: Record<string, string> = { source: source.value };
   if (date.value) query.date = date.value;
   if (species.value) query.species = species.value;
-  if (behavior.value && source.value === "boat" && species.value) query.behavior = behavior.value;
-  if (heatmap.value && source.value === "boat") query.heatmap = "1";
+  if (behavior.value && species.value) query.behavior = behavior.value;
+  if (heatmap.value) query.heatmap = "1";
   if (seaOn.value) {
     query.sea = "1";
     query.variable = variable.value;
@@ -98,7 +98,7 @@ function syncQuery() {
 }
 
 function setSource(next: "boat" | "shore") {
-  if (next !== "boat") behavior.value = "";
+  behavior.value = "";
   source.value = next;
   if (!date.value) return;
   const list = datesFor(next);
@@ -173,7 +173,7 @@ async function load() {
   const sightingQuery: Record<string, string> = { source: source.value };
   if (date.value) sightingQuery.date = date.value;
   if (species.value) sightingQuery.species = species.value;
-  if (behavior.value && source.value === "boat" && species.value) sightingQuery.behavior = behavior.value;
+  if (behavior.value && species.value) sightingQuery.behavior = behavior.value;
   const zoneQuery: Record<string, string> = {};
   if (date.value) zoneQuery.date = date.value;
   if (species.value) zoneQuery.species = species.value;
@@ -185,7 +185,7 @@ async function load() {
       getSightings(sightingQuery),
       source.value === "shore" ? getShoreZones(zoneQuery) : Promise.resolve(empty),
       source.value === "boat" ? getTracks(date.value || undefined) : Promise.resolve(empty),
-      source.value === "boat" && species.value ? getBehavior(species.value) : Promise.resolve([] as BehaviorRow[]),
+      species.value ? getBehavior(species.value, source.value) : Promise.resolve([] as BehaviorRow[]),
       seaOn.value && date.value
         ? getEnvironment(variable.value, date.value, variable.value === "temperature" ? depth.value : "mean")
         : Promise.resolve(null),
@@ -267,7 +267,6 @@ watch([source, species, behavior, variable, depth, date, seaOn, heatmap], () => 
           </div>
           <button type="button" class="layer-toggle" :class="{ active: seaOn }" @click="toggleSea">Capa del mar</button>
           <button
-            v-if="source === 'boat'"
             type="button"
             class="layer-toggle"
             :class="{ active: heatmap }"
@@ -298,7 +297,7 @@ watch([source, species, behavior, variable, depth, date, seaOn, heatmap], () => 
             </select>
           </label>
         </div>
-        <div v-if="source === 'boat' && species && behaviorRows.length" class="toolbar-row chips">
+        <div v-if="species && behaviorRows.length" class="toolbar-row chips">
           <button type="button" :class="{ active: !behavior }" @click="behavior = ''">Todos</button>
           <button
             v-for="item in behaviorRows"
@@ -319,9 +318,9 @@ watch([source, species, behavior, variable, depth, date, seaOn, heatmap], () => 
         :environment="seaOn && date ? environment : null"
         :tracks="source === 'boat' ? tracks : null"
         :zones="source === 'shore' ? zones : null"
-        :sightings="source === 'boat' ? sightings : null"
+        :sightings="sightings"
         :fit="!!date"
-        :heatmap="source === 'boat' && heatmap"
+        :heatmap="heatmap"
       />
       <p v-if="showEmpty" class="map-empty">
         Este día no hay avistamientos con este filtro.

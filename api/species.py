@@ -37,9 +37,49 @@ PHOTO_HINTS = [
 ]
 
 
+SPECIES_FIXES = {
+    "Chungungo (Contra felina)": "Chungungo (Lontra felina)",
+    "Chungungo (Lontra felina": "Chungungo (Lontra felina)",
+    "Lobo comun (Otaria flavescens)": "Lobo común (Otaria flavescens)",
+    "Lobo común (Otaria flavences)": "Lobo común (Otaria flavescens)",
+    "Ballena jorobada (Megaptera noveangliae)": "Ballena jorobada (Megaptera novaeangliae)",
+    "Ballena jorobada (Megaptera novaengliae)": "Ballena jorobada (Megaptera novaeangliae)",
+    "Lobo fino de Juan fernández (Arctocephalus philippii)": "Lobo fino de Juan Fernández (Arctocephalus philippii)",
+}
+
+BEHAVIOR_FIXES = {
+    "alimentandose": "Alimentándose",
+    "alimentándose": "Alimentándose",
+    "alimetandose": "Alimentándose",
+    "alimentadose": "Alimentándose",
+    "forrajeo": "Forrajeo",
+    "forrajeando": "Forrajeo",
+    "forrajendo": "Forrajeo",
+    "navegando": "Navegando",
+    "navagendo": "Navegando",
+    "descansando": "Descansando",
+    "descanzando": "Descansando",
+    "descansando sobre la roca": "Descansando sobre la roca",
+    "desplazandose": "Desplazándose",
+    "desplazándose": "Desplazándose",
+    "sociabilizando": "Socializando",
+    "socializando": "Socializando",
+    "social": "Socializando",
+    "práctica social": "Socializando",
+    "criando": "Criando",
+    "amamantando": "Amamantando",
+    "jugando": "Jugando",
+    "saltando": "Saltando",
+    "termoregulando": "Termorregulando",
+    "muerta": "Muerto / Varado",
+    "muerto": "Muerto / Varado",
+}
+
+
 def normalize_species(name: str) -> str:
     text = re.sub(r"\s+", " ", str(name).strip())
-    return text.replace("novaengliae", "novaeangliae")
+    text = text.replace("novaengliae", "novaeangliae").replace("noveangliae", "novaeangliae")
+    return SPECIES_FIXES.get(text, text)
 
 
 def short_name(name: str) -> str:
@@ -60,7 +100,7 @@ def normalize_behavior(value) -> str | None:
     text = re.sub(r"\s+", " ", str(value).strip())
     if not text or text.lower() == "nan":
         return None
-    return text
+    return BEHAVIOR_FIXES.get(text.lower(), text)
 
 
 def species_from_filename(filename: str) -> str | None:

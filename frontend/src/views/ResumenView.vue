@@ -126,8 +126,8 @@ onMounted(async () => {
         <SeasonChart :rows="season" />
       </section>
       <section class="panel">
-        <h2>Comportamiento en navegación</h2>
-        <p class="note">Un clic abre el mapa filtrado por esa especie y ese comportamiento.</p>
+        <h2>Comportamiento observado</h2>
+        <p class="note">Registros de barco y orilla. Un clic abre el mapa filtrado por esa especie y comportamiento.</p>
         <BehaviorChart :rows="behavior" />
       </section>
     </template>

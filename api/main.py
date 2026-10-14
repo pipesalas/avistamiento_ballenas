@@ -142,5 +142,8 @@ def stats_seasonality(
 
 
 @app.get("/api/stats/behavior")
-def stats_behavior(species: str | None = None) -> list:
-    return get_store().stats_behavior(species)
+def stats_behavior(
+    species: str | None = None,
+    source: SourceType = Query("both"),
+) -> list:
+    return get_store().stats_behavior(species, source)

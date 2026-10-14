@@ -150,9 +150,10 @@ export function sightingsCsvUrl(query: Record<string, string> = {}): string {
   return `/api/sightings.csv${qs ? `?${qs}` : ""}`;
 }
 
-export function getBehavior(species?: string) {
-  const params = species ? `?species=${encodeURIComponent(species)}` : "";
-  return getJson<BehaviorRow[]>(`/api/stats/behavior${params}`);
+export function getBehavior(species?: string, source = "both") {
+  const params = new URLSearchParams({ source });
+  if (species) params.set("species", species);
+  return getJson<BehaviorRow[]>(`/api/stats/behavior?${params}`);
 }
 
 export function shiftDate(iso: string, days: number): string {

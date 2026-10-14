@@ -24,7 +24,7 @@ from api.species import (
     slugify,
     species_from_filename,
 )
-from config import zona_1, zona_2, zona_3, zona_4
+from config import zona_1, zona_2, zona_3, zona_4, zona_5, zona_6, zona_7
 
 TEMP_COLORS = [
     [255, 255, 204],
@@ -46,9 +46,60 @@ CHL_COLORS = [
     [0, 109, 44],
     [0, 68, 27],
 ]
-ZONE_COLORS = {1: "#F4D03F", 2: "#E74C3C", 3: "#3498DB", 4: "#1E8449"}
-ZONES = {1: zona_1, 2: zona_2, 3: zona_3, 4: zona_4}
+ZONE_COLORS = {
+    1: "#F4D03F",
+    2: "#E74C3C",
+    3: "#3498DB",
+    4: "#1E8449",
+    5: "#9B59B6",
+    6: "#E67E22",
+    7: "#16A085",
+}
+ZONES = {1: zona_1, 2: zona_2, 3: zona_3, 4: zona_4, 5: zona_5, 6: zona_6, 7: zona_7}
 DATE_IN_NAME = re.compile(r"(?P<d>\d{2})[_:](?P<m>\d{2})[_:](?P<y>\d{4})")
+
+
+def _utm18s_to_lonlat(easting: float, northing: float) -> tuple[float, float] | None:
+    if pd.isna(easting) or pd.isna(northing):
+        return None
+    a = 6378137.0
+    f = 1 / 298.257223563
+    k0 = 0.9996
+    e = float(np.sqrt(2 * f - f * f))
+    e1sq = e * e / (1 - e * e)
+    x = float(easting) - 500000.0
+    y = float(northing) - 10000000.0
+    m_val = y / k0
+    mu = m_val / (a * (1 - e * e / 4 - 3 * e**4 / 64 - 5 * e**6 / 256))
+    e1 = (1 - float(np.sqrt(1 - e * e))) / (1 + float(np.sqrt(1 - e * e)))
+    j1 = 3 * e1 / 2 - 27 * e1**3 / 32
+    j2 = 21 * e1**2 / 16 - 55 * e1**4 / 32
+    j3 = 151 * e1**3 / 96
+    j4 = 1097 * e1**4 / 512
+    fp = (
+        mu
+        + j1 * float(np.sin(2 * mu))
+        + j2 * float(np.sin(4 * mu))
+        + j3 * float(np.sin(6 * mu))
+        + j4 * float(np.sin(8 * mu))
+    )
+    c1 = e1sq * float(np.cos(fp)) ** 2
+    t1 = float(np.tan(fp)) ** 2
+    r1 = a * (1 - e * e) / (1 - e * e * float(np.sin(fp)) ** 2) ** 1.5
+    n1 = a / float(np.sqrt(1 - e * e * float(np.sin(fp)) ** 2))
+    d_val = x / (n1 * k0)
+    q1 = n1 * float(np.tan(fp)) / r1
+    q2 = d_val**2 / 2
+    q3 = (5 + 3 * t1 + 10 * c1 - 4 * c1**2 - 9 * e1sq) * d_val**4 / 24
+    q4 = (61 + 90 * t1 + 298 * c1 + 45 * t1**2 - 3 * c1**2 - 252 * e1sq) * d_val**6 / 720
+    lat = float(np.degrees(fp - q1 * (q2 - q3 + q4)))
+    q5 = d_val
+    q6 = (1 + 2 * t1 + c1) * d_val**3 / 6
+    q7 = (5 - 2 * c1 + 28 * t1 - 3 * c1**2 + 8 * e1sq + 24 * t1**2) * d_val**5 / 120
+    lon = -75.0 + float(np.degrees((q5 - q6 + q7) / float(np.cos(fp))))
+    if not (-40.3 <= lat <= -39.6 and -74.0 <= lon <= -73.2):
+        return None
+    return round(lon, 5), round(lat, 5)
 
 
 def _hex(rgb: list[int]) -> str:
@@ -134,68 +185,114 @@ class DataStore:
         }
         self._temp_days = set(self._temp_by_day.keys())
         self._chl_days = set(self._chl_by_day.keys())
-        self._enrich_boat_environment()
+        self._enrich_environment(self.boat)
+        self._enrich_environment(self.shore)
 
-    def _enrich_boat_environment(self) -> None:
+    def _enrich_environment(self, frame: pd.DataFrame) -> None:
         sst_values: list[float | None] = []
         chl_values: list[float | None] = []
-        for row in self.boat.itertuples(index=False):
+        for row in frame.itertuples(index=False):
             day = str(row.day)
-            lat = float(row.latitude)
-            lon = float(row.longitude)
+            lat = row.latitude
+            lon = row.longitude
             sst: float | None = None
             chl: float | None = None
+            if pd.notna(lat) and pd.notna(lon):
+                lat_f = float(lat)
+                lon_f = float(lon)
+                temp_day = self._temp_by_day.get(day)
+                if temp_day is not None and not temp_day.empty:
+                    surface = temp_day[np.isclose(temp_day["depth"], self.min_depth)].dropna(subset=["temperature"])
+                    if not surface.empty:
+                        dist2 = (surface["latitude"] - lat_f) ** 2 + (surface["longitude"] - lon_f) ** 2
+                        nearest = surface.loc[dist2.idxmin()]
+                        sst = round(float(nearest["temperature"]), 1)
 
-            temp_day = self._temp_by_day.get(day)
-            if temp_day is not None and not temp_day.empty:
-                surface = temp_day[np.isclose(temp_day["depth"], self.min_depth)].dropna(subset=["temperature"])
-                if not surface.empty:
-                    dist2 = (surface["latitude"] - lat) ** 2 + (surface["longitude"] - lon) ** 2
-                    nearest = surface.loc[dist2.idxmin()]
-                    sst = round(float(nearest["temperature"]), 1)
-
-            chl_day = self._chl_by_day.get(day)
-            if chl_day is not None and not chl_day.empty:
-                valid_chl = chl_day.dropna(subset=["chlorophyll"])
-                if not valid_chl.empty:
-                    dist2 = (valid_chl["latitude"] - lat) ** 2 + (valid_chl["longitude"] - lon) ** 2
-                    nearest = valid_chl.loc[dist2.idxmin()]
-                    chl = round(float(nearest["chlorophyll"]), 2)
+                chl_day = self._chl_by_day.get(day)
+                if chl_day is not None and not chl_day.empty:
+                    valid_chl = chl_day.dropna(subset=["chlorophyll"])
+                    if not valid_chl.empty:
+                        dist2 = (valid_chl["latitude"] - lat_f) ** 2 + (valid_chl["longitude"] - lon_f) ** 2
+                        nearest = valid_chl.loc[dist2.idxmin()]
+                        chl = round(float(nearest["chlorophyll"]), 2)
 
             sst_values.append(sst)
             chl_values.append(chl)
 
-        self.boat["sst_c"] = sst_values
-        self.boat["chlorophyll"] = chl_values
+        frame["sst_c"] = sst_values
+        frame["chlorophyll"] = chl_values
+
+    def _workbook_path(self) -> Path | None:
+        matches = sorted(self.root.joinpath("data").glob("Monitoreo*.xlsx"))
+        return matches[0] if matches else None
 
     def _load_boat(self) -> pd.DataFrame:
-        frame = pd.read_excel(self.root / "data" / "datos_avistamientos.xlsx")
-        frame.columns = [column.strip() for column in frame.columns]
-        frame = frame[frame["Fecha"] >= "2023-01-01"].copy()
+        wb = self._workbook_path()
+        if wb is not None:
+            frame = pd.read_excel(wb, sheet_name="Muestreo a distancia")
+        else:
+            frame = pd.read_excel(self.root / "data" / "datos_avistamientos.xlsx")
+        frame.columns = [str(column).strip() for column in frame.columns]
+        frame = frame.dropna(subset=["Fecha", "Especie"]).copy()
+        frame["day"] = pd.to_datetime(frame["Fecha"], errors="coerce").dt.strftime("%Y-%m-%d")
+        frame = frame[frame["day"] >= "2023-01-01"].copy()
         frame["species"] = frame["Especie"].map(normalize_species)
-        frame["day"] = pd.to_datetime(frame["Fecha"]).dt.strftime("%Y-%m-%d")
-        frame["individuals"] = pd.to_numeric(frame["individuos"], errors="coerce").fillna(0).astype(int)
+        ind_col = "# individuos" if "# individuos" in frame.columns else "individuos"
+        frame["individuals"] = pd.to_numeric(frame[ind_col], errors="coerce").fillna(0).astype(int)
         frame["behavior"] = frame["Comportamiento"].map(normalize_behavior)
         frame["notes"] = frame["Observaciones"].map(_clean_text)
         frame["hour"] = frame["Hora"].map(_hour_text)
         frame["distance_m"] = pd.to_numeric(frame["Distancia (mts)"], errors="coerce")
         frame["latitude"] = pd.to_numeric(frame["Latitud"], errors="coerce")
         frame["longitude"] = pd.to_numeric(frame["Longitud"], errors="coerce")
-        frame = frame.dropna(subset=["latitude", "longitude", "species"])
+        frame = frame.dropna(subset=["latitude", "longitude", "species", "day"])
         frame["source"] = "boat"
         return frame.reset_index(drop=True)
 
     def _load_shore(self) -> pd.DataFrame:
-        frame = pd.read_excel(self.root / "data" / "Planilla conteo directo .xlsx", skiprows=1)
-        frame.columns = [column.strip() for column in frame.columns]
+        wb = self._workbook_path()
+        if wb is not None:
+            xl = pd.ExcelFile(wb)
+            shore_sheet = next(
+                (name for name in xl.sheet_names if "conteo directo" in name.lower()),
+                xl.sheet_names[-1],
+            )
+            frame = xl.parse(shore_sheet)
+        else:
+            frame = pd.read_excel(self.root / "data" / "Planilla conteo directo .xlsx", skiprows=1)
+        frame.columns = [str(column).strip() for column in frame.columns]
+        frame = frame.dropna(subset=["Fecha", "Especie", "Subzona"]).copy()
         frame["species"] = frame["Especie"].map(normalize_species)
-        frame["day"] = pd.to_datetime(frame["Fecha"]).dt.strftime("%Y-%m-%d")
+        frame["day"] = pd.to_datetime(frame["Fecha"], errors="coerce").dt.strftime("%Y-%m-%d")
         frame["individuals"] = pd.to_numeric(frame["Numero"], errors="coerce").fillna(0).astype(int)
         frame["notes"] = frame["Observaciones"].map(_clean_text)
         frame["subzone"] = pd.to_numeric(frame["Subzona"], errors="coerce").astype("Int64")
         frame["hour"] = frame["Hora"].map(_hour_text)
+        if "Comportamiento" in frame.columns:
+            frame["behavior"] = frame["Comportamiento"].map(normalize_behavior)
+        else:
+            frame["behavior"] = None
+
+        easting_col = next((c for c in frame.columns if "este" in c.lower()), None)
+        northing_col = next((c for c in frame.columns if "norte" in c.lower()), None)
+        lons: list[float | None] = []
+        lats: list[float | None] = []
+        for idx, row in frame.iterrows():
+            coord = None
+            if easting_col and northing_col:
+                e_val = pd.to_numeric(row[easting_col], errors="coerce")
+                n_val = pd.to_numeric(row[northing_col], errors="coerce")
+                coord = _utm18s_to_lonlat(e_val, n_val)
+            if coord is None:
+                sz = int(row["subzone"]) if pd.notna(row["subzone"]) and int(row["subzone"]) in ZONES else 1
+                c_lon, c_lat = _centroid(ZONES[sz]["coordinates"][0])
+                coord = (c_lon, c_lat)
+            lons.append(coord[0])
+            lats.append(coord[1])
+        frame["longitude"] = lons
+        frame["latitude"] = lats
         frame["source"] = "shore"
-        frame = frame.dropna(subset=["species", "subzone"])
+        frame = frame.dropna(subset=["species", "subzone", "day"])
         return frame.reset_index(drop=True)
 
     def _load_tracks(self) -> list[dict]:
@@ -267,7 +364,9 @@ class DataStore:
         )
 
     def meta(self) -> dict:
-        behaviors = sorted({value for value in self.boat["behavior"].dropna().unique()})
+        behaviors = sorted(
+            {value for value in pd.concat([self.boat["behavior"], self.shore["behavior"]]).dropna().unique()}
+        )
         sighting_days = sorted(set(self.boat["day"]) | set(self.shore["day"]))
         env_days = sorted(self._temp_days | self._chl_days)
         temp_ramp = [_hex(rgb) for rgb in TEMP_COLORS]
@@ -280,7 +379,7 @@ class DataStore:
             "species": self.species,
             "behaviors": behaviors,
             "subzones": [
-                {"id": zone_id, "color": ZONE_COLORS[zone_id]} for zone_id in (1, 2, 3, 4)
+                {"id": zone_id, "color": ZONE_COLORS[zone_id]} for zone_id in sorted(ZONES.keys())
             ],
             "sightings": {
                 "start": sighting_days[0] if sighting_days else None,
@@ -362,13 +461,18 @@ class DataStore:
                 chl = row.get("chlorophyll")
                 chlorophyll = None if chl is None or pd.isna(chl) else float(chl)
             else:
-                ring = ZONES[int(row["subzone"])]["coordinates"][0]
-                coordinates = _centroid(ring)
                 subzone = int(row["subzone"])
-                behavior = None
+                if pd.notna(row.get("longitude")) and pd.notna(row.get("latitude")):
+                    coordinates = [round(float(row["longitude"]), 5), round(float(row["latitude"]), 5)]
+                else:
+                    ring = ZONES[subzone]["coordinates"][0]
+                    coordinates = _centroid(ring)
+                behavior = row.get("behavior")
                 distance_m = None
-                sst_c = None
-                chlorophyll = None
+                sst = row.get("sst_c")
+                sst_c = None if sst is None or pd.isna(sst) else float(sst)
+                chl = row.get("chlorophyll")
+                chlorophyll = None if chl is None or pd.isna(chl) else float(chl)
             features.append(
                 {
                     "type": "Feature",
@@ -651,8 +755,8 @@ class DataStore:
             for row in grouped.itertuples(index=False)
         ]
 
-    def stats_behavior(self, species: str | None = None) -> list[dict]:
-        frame = self.boat.dropna(subset=["behavior"])
+    def stats_behavior(self, species: str | None = None, source: str = "both") -> list[dict]:
+        frame = self._combined(source).dropna(subset=["behavior"])
         if species:
             record = self.by_slug.get(species)
             if record:
