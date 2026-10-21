@@ -135,9 +135,30 @@ def _centroid(ring: list) -> list[float]:
 
 
 def _day_column(frame: pd.DataFrame) -> pd.DataFrame:
-    frame = frame.copy()
-    frame["day"] = pd.to_datetime(frame["time"]).dt.strftime("%Y-%m-%d")
+    """Prepare a newly loaded grid, formatting each distinct day only once."""
+    if not frame["time"].is_monotonic_increasing:
+        frame = frame.sort_values("time", kind="stable")
+    codes, days = pd.factorize(pd.to_datetime(frame["time"]).dt.normalize(), sort=True)
+    frame["day"] = pd.Categorical.from_codes(codes, categories=days.strftime("%Y-%m-%d"))
     return frame
+
+
+def _day_slices(frame: pd.DataFrame) -> dict[str, slice]:
+    """Index contiguous days without retaining a second copy of the grid."""
+    codes = frame["day"].cat.codes.to_numpy()
+    if not len(codes):
+        return {}
+    boundaries = np.r_[0, np.flatnonzero(codes[1:] != codes[:-1]) + 1, len(codes)]
+    categories = frame["day"].cat.categories
+    return {
+        str(categories[codes[start]]): slice(int(start), int(end))
+        for start, end in zip(boundaries[:-1], boundaries[1:])
+        if codes[start] >= 0
+    }
+
+
+def _day_frame(frame: pd.DataFrame, days: dict[str, slice], date: str) -> pd.DataFrame:
+    return frame.iloc[days.get(date, slice(0, 0))]
 
 
 def _clean_text(value) -> str:
@@ -177,12 +198,8 @@ class DataStore:
         self.depths = sorted(float(value) for value in self.temperature["depth"].unique())
         self.species = self._build_species()
         self.by_slug = {item["slug"]: item for item in self.species}
-        self._temp_by_day: dict[str, pd.DataFrame] = {
-            str(day): group for day, group in self.temperature.groupby("day")
-        }
-        self._chl_by_day: dict[str, pd.DataFrame] = {
-            str(day): group for day, group in self.chlorophyll.groupby("day")
-        }
+        self._temp_by_day = _day_slices(self.temperature)
+        self._chl_by_day = _day_slices(self.chlorophyll)
         self._temp_days = set(self._temp_by_day.keys())
         self._chl_days = set(self._chl_by_day.keys())
         self._enrich_environment(self.boat)
@@ -200,16 +217,16 @@ class DataStore:
             if pd.notna(lat) and pd.notna(lon):
                 lat_f = float(lat)
                 lon_f = float(lon)
-                temp_day = self._temp_by_day.get(day)
-                if temp_day is not None and not temp_day.empty:
+                temp_day = _day_frame(self.temperature, self._temp_by_day, day)
+                if not temp_day.empty:
                     surface = temp_day[np.isclose(temp_day["depth"], self.min_depth)].dropna(subset=["temperature"])
                     if not surface.empty:
                         dist2 = (surface["latitude"] - lat_f) ** 2 + (surface["longitude"] - lon_f) ** 2
                         nearest = surface.loc[dist2.idxmin()]
                         sst = round(float(nearest["temperature"]), 1)
 
-                chl_day = self._chl_by_day.get(day)
-                if chl_day is not None and not chl_day.empty:
+                chl_day = _day_frame(self.chlorophyll, self._chl_by_day, day)
+                if not chl_day.empty:
                     valid_chl = chl_day.dropna(subset=["chlorophyll"])
                     if not valid_chl.empty:
                         dist2 = (valid_chl["latitude"] - lat_f) ** 2 + (valid_chl["longitude"] - lon_f) ** 2
@@ -340,6 +357,9 @@ class DataStore:
                         "caption": path.stem.replace("_", " ").replace(":", " "),
                     }
                 )
+                thumbnail = folder / "thumbnails" / f"{path.name}.webp"
+                if thumbnail.is_file():
+                    photos[-1]["thumbnail_url"] = f"/media/{mount}/thumbnails/{quote(thumbnail.name)}"
         return photos
 
     def _build_species(self) -> list[dict]:
@@ -582,7 +602,7 @@ class DataStore:
 
     def environment(self, variable: str, date: str, depth: str = "surface") -> dict:
         if variable == "temperature":
-            day = self._temp_by_day.get(date, self.temperature.iloc[0:0])
+            day = _day_frame(self.temperature, self._temp_by_day, date)
             unit = "°C"
             ramp = TEMP_COLORS
             grid = 0.08
@@ -596,7 +616,7 @@ class DataStore:
                 grouped = day[np.isclose(day["depth"].astype(float), float(depth), atol=0.02)]
                 column = "temperature"
         elif variable in ("chlorophyll", "phyc"):
-            day = self._chl_by_day.get(date, self.chlorophyll.iloc[0:0])
+            day = _day_frame(self.chlorophyll, self._chl_by_day, date)
             grouped = day.groupby(["latitude", "longitude"], as_index=False)[[variable]].mean()
             column = variable
             unit = "mg/m³" if variable == "chlorophyll" else "mmol/m³"
@@ -672,6 +692,8 @@ class DataStore:
                     "slug": None if species_record is None else species_record["slug"],
                 }
             )
+            if "thumbnail_url" in photo:
+                results[-1]["thumbnail_url"] = photo["thumbnail_url"]
         return results
 
     def _combined(self, source: str) -> pd.DataFrame:

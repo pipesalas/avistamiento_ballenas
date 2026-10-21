@@ -222,10 +222,15 @@ onMounted(async () => {
   }
 });
 
-watch([source, species, behavior, variable, depth, date, seaOn, heatmap], () => {
+watch([source, species, behavior, variable, depth, date, seaOn], () => {
   if (!ready.value) return;
   syncQuery();
   load();
+});
+
+// The heatmap only changes rendering; it uses the sightings already loaded.
+watch(heatmap, () => {
+  if (ready.value) syncQuery();
 });
 </script>
 

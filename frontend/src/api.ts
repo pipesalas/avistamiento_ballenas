@@ -53,6 +53,7 @@ export interface FeatureCollection {
 
 export interface Photo {
   url: string;
+  thumbnail_url?: string;
   date: string;
   source: string;
   caption: string;
@@ -86,21 +87,26 @@ export interface BehaviorRow {
   individuals: number;
 }
 
-async function getJson<T>(url: string): Promise<T> {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`No se pudo leer ${url}`);
-  }
-  return response.json() as Promise<T>;
+const pendingRequests = new Map<string, Promise<unknown>>();
+
+function getJson<T>(url: string): Promise<T> {
+  const pending = pendingRequests.get(url);
+  if (pending) return pending as Promise<T>;
+
+  // Share concurrent requests. HTTP Cache-Control handles subsequent reads
+  // without keeping another, potentially stale copy of every dataset in JS.
+  const request = fetch(url)
+    .then((response) => {
+      if (!response.ok) throw new Error(`No se pudo leer ${url}`);
+      return response.json() as Promise<T>;
+    })
+    .finally(() => pendingRequests.delete(url));
+  pendingRequests.set(url, request);
+  return request;
 }
 
-let metaPromise: Promise<Meta> | null = null;
-
 export function getMeta(): Promise<Meta> {
-  if (!metaPromise) {
-    metaPromise = getJson<Meta>("/api/meta");
-  }
-  return metaPromise;
+  return getJson<Meta>("/api/meta");
 }
 
 export function getEnvironment(variable: string, date: string, depth: string) {

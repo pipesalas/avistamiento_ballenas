@@ -1,0 +1,4 @@
+#!include:.dockerignore
+!Dockerfile
+!.dockerignore
+!cloudbuild.yaml

@@ -42,7 +42,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKey));
   <div v-if="photos.length" class="photos">
     <figure v-for="(photo, index) in photos" :key="photo.url">
       <button type="button" class="photo-open" @click="open(index)">
-        <img :src="photo.url" :alt="photo.caption" loading="lazy" />
+        <img :src="photo.thumbnail_url || photo.url" :alt="photo.caption" loading="lazy" decoding="async" />
       </button>
       <figcaption>
         <strong>

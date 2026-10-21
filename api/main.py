@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
+from api.http import PublicDataMiddleware
 from api.store import ROOT, get_store
 
 SourceType = Literal["boat", "shore", "both"]
@@ -22,6 +23,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="Avistamiento de mamíferos marinos", lifespan=lifespan)
+app.add_middleware(PublicDataMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://127.0.0.1:5173", "http://localhost:5173"],

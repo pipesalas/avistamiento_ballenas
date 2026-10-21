@@ -12,3 +12,6 @@ data/Planilla conteo directo .numbers
 data/Planilla Datos total terrenos .numbers
 data/.DS_Store
 .DS_Store
+data/**/thumbnails/
+.firebase/
+firebase-debug*.log
