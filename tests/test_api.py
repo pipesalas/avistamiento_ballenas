@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 
 from api.main import app
 from api.species import normalize_behavior, normalize_species, slugify, species_from_filename
+from api.store import _safe_csv_cell
 
 client = TestClient(app)
 
@@ -53,6 +54,9 @@ def test_sightings_csv_export() -> None:
     lines = response.text.strip().splitlines()
     assert len(lines) > 1
     assert "temperatura_superficie_c" in lines[0]
+    assert _safe_csv_cell("=CMD|' /C calc'!A0") == "'=CMD|' /C calc'!A0"
+    assert _safe_csv_cell("+SUM(A1:A2)") == "'+SUM(A1:A2)"
+    assert _safe_csv_cell("Texto normal") == "Texto normal"
 
 
 def test_timeline_and_validation() -> None:

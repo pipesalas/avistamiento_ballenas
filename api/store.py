@@ -168,6 +168,14 @@ def _clean_text(value) -> str:
     return "" if text.lower() == "nan" else text
 
 
+def _safe_csv_cell(value: str | None) -> str:
+    if not value:
+        return ""
+    if value[0] in ("=", "+", "-", "@", "\t", "\r"):
+        return f"'{value}"
+    return value
+
+
 def _hour_text(value) -> str:
     if value is None or (isinstance(value, float) and np.isnan(value)):
         return ""
@@ -206,35 +214,48 @@ class DataStore:
         self._enrich_environment(self.shore)
 
     def _enrich_environment(self, frame: pd.DataFrame) -> None:
-        sst_values: list[float | None] = []
-        chl_values: list[float | None] = []
-        for row in frame.itertuples(index=False):
-            day = str(row.day)
-            lat = row.latitude
-            lon = row.longitude
-            sst: float | None = None
-            chl: float | None = None
-            if pd.notna(lat) and pd.notna(lon):
-                lat_f = float(lat)
-                lon_f = float(lon)
-                temp_day = _day_frame(self.temperature, self._temp_by_day, day)
-                if not temp_day.empty:
-                    surface = temp_day[np.isclose(temp_day["depth"], self.min_depth)].dropna(subset=["temperature"])
-                    if not surface.empty:
-                        dist2 = (surface["latitude"] - lat_f) ** 2 + (surface["longitude"] - lon_f) ** 2
-                        nearest = surface.loc[dist2.idxmin()]
-                        sst = round(float(nearest["temperature"]), 1)
+        n = len(frame)
+        sst_values: list[float | None] = [None] * n
+        chl_values: list[float | None] = [None] * n
+        if n == 0:
+            frame["sst_c"] = sst_values
+            frame["chlorophyll"] = chl_values
+            return
 
-                chl_day = _day_frame(self.chlorophyll, self._chl_by_day, day)
-                if not chl_day.empty:
-                    valid_chl = chl_day.dropna(subset=["chlorophyll"])
-                    if not valid_chl.empty:
-                        dist2 = (valid_chl["latitude"] - lat_f) ** 2 + (valid_chl["longitude"] - lon_f) ** 2
-                        nearest = valid_chl.loc[dist2.idxmin()]
-                        chl = round(float(nearest["chlorophyll"]), 2)
+        lats = frame["latitude"].to_numpy(dtype=float, na_value=np.nan)
+        lons = frame["longitude"].to_numpy(dtype=float, na_value=np.nan)
+        valid_mask = ~(np.isnan(lats) | np.isnan(lons))
 
-            sst_values.append(sst)
-            chl_values.append(chl)
+        for day, indices in frame.groupby("day", sort=False).groups.items():
+            idx = np.asarray(indices, dtype=int)
+            idx = idx[valid_mask[idx]]
+            if len(idx) == 0:
+                continue
+            pts_lat = lats[idx][:, None]
+            pts_lon = lons[idx][:, None]
+            day_str = str(day)
+
+            temp_day = _day_frame(self.temperature, self._temp_by_day, day_str)
+            if not temp_day.empty:
+                surface = temp_day[np.isclose(temp_day["depth"], self.min_depth)].dropna(subset=["temperature"])
+                if not surface.empty:
+                    grid_lat = surface["latitude"].to_numpy(dtype=float)[None, :]
+                    grid_lon = surface["longitude"].to_numpy(dtype=float)[None, :]
+                    grid_val = surface["temperature"].to_numpy(dtype=float)
+                    nearest_idx = ((pts_lat - grid_lat) ** 2 + (pts_lon - grid_lon) ** 2).argmin(axis=1)
+                    for pos, val in zip(idx, grid_val[nearest_idx]):
+                        sst_values[int(pos)] = round(float(val), 1)
+
+            chl_day = _day_frame(self.chlorophyll, self._chl_by_day, day_str)
+            if not chl_day.empty:
+                valid_chl = chl_day.dropna(subset=["chlorophyll"])
+                if not valid_chl.empty:
+                    grid_lat = valid_chl["latitude"].to_numpy(dtype=float)[None, :]
+                    grid_lon = valid_chl["longitude"].to_numpy(dtype=float)[None, :]
+                    grid_val = valid_chl["chlorophyll"].to_numpy(dtype=float)
+                    nearest_idx = ((pts_lat - grid_lat) ** 2 + (pts_lon - grid_lon) ** 2).argmin(axis=1)
+                    for pos, val in zip(idx, grid_val[nearest_idx]):
+                        chl_values[int(pos)] = round(float(val), 2)
 
         frame["sst_c"] = sst_values
         frame["chlorophyll"] = chl_values
@@ -532,16 +553,16 @@ class DataStore:
                     "fecha": props["date"],
                     "hora": props["hour"],
                     "fuente": props["source"],
-                    "especie": props["species"],
-                    "especie_corto": props["species_short"],
+                    "especie": _safe_csv_cell(props["species"]),
+                    "especie_corto": _safe_csv_cell(props["species_short"]),
                     "individuos": props["individuals"],
-                    "comportamiento": props["behavior"] or "",
+                    "comportamiento": _safe_csv_cell(props["behavior"]),
                     "subzona": props["subzone"] or "",
                     "longitud": coords[0],
                     "latitud": coords[1],
                     "temperatura_superficie_c": "" if props["sst_c"] is None else props["sst_c"],
                     "clorofila_mg_m3": "" if props["chlorophyll"] is None else props["chlorophyll"],
-                    "observaciones": props["notes"] or "",
+                    "observaciones": _safe_csv_cell(props["notes"]),
                 }
             )
         df = pd.DataFrame(rows)

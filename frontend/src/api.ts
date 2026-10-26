@@ -124,9 +124,13 @@ export function getShoreZones(query: Record<string, string>) {
   return getJson<FeatureCollection>(`/api/shore-zones?${params}`);
 }
 
-export function getTracks(date?: string) {
-  const params = date ? `?date=${date}` : "";
-  return getJson<FeatureCollection>(`/api/tracks${params}`);
+export async function getTracks(date?: string): Promise<FeatureCollection> {
+  const all = await getJson<FeatureCollection>("/api/tracks");
+  if (!date) return all;
+  return {
+    type: "FeatureCollection",
+    features: all.features.filter((feature) => feature.properties?.date === date),
+  };
 }
 
 export function getPhotos(query: Record<string, string>) {
