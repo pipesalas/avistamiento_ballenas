@@ -3,7 +3,7 @@
     "public": "frontend/dist",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "predeploy": [
-      "uv run --python 3.12 --with pillow==13.0.0 python \"$PROJECT_DIR/scripts/build_hosting.py\""
+      "uv run --python 3.12 \"$PROJECT_DIR/scripts/build_hosting.py\""
     ],
     "headers": [
       {

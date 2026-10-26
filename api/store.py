@@ -239,16 +239,15 @@ class DataStore:
         frame["sst_c"] = sst_values
         frame["chlorophyll"] = chl_values
 
-    def _workbook_path(self) -> Path | None:
+    def _workbook_path(self) -> Path:
         matches = sorted(self.root.joinpath("data").glob("Monitoreo*.xlsx"))
-        return matches[0] if matches else None
+        if not matches:
+            raise FileNotFoundError("No se encontró el archivo Excel de monitoreo en data/")
+        return matches[0]
 
     def _load_boat(self) -> pd.DataFrame:
         wb = self._workbook_path()
-        if wb is not None:
-            frame = pd.read_excel(wb, sheet_name="Muestreo a distancia")
-        else:
-            frame = pd.read_excel(self.root / "data" / "datos_avistamientos.xlsx")
+        frame = pd.read_excel(wb, sheet_name="Muestreo a distancia")
         frame.columns = [str(column).strip() for column in frame.columns]
         frame = frame.dropna(subset=["Fecha", "Especie"]).copy()
         frame["day"] = pd.to_datetime(frame["Fecha"], errors="coerce").dt.strftime("%Y-%m-%d")
@@ -268,15 +267,12 @@ class DataStore:
 
     def _load_shore(self) -> pd.DataFrame:
         wb = self._workbook_path()
-        if wb is not None:
-            xl = pd.ExcelFile(wb)
+        with pd.ExcelFile(wb) as xl:
             shore_sheet = next(
                 (name for name in xl.sheet_names if "conteo directo" in name.lower()),
                 xl.sheet_names[-1],
             )
-            frame = xl.parse(shore_sheet)
-        else:
-            frame = pd.read_excel(self.root / "data" / "Planilla conteo directo .xlsx", skiprows=1)
+            frame = pd.read_excel(xl, sheet_name=shore_sheet)
         frame.columns = [str(column).strip() for column in frame.columns]
         frame = frame.dropna(subset=["Fecha", "Especie", "Subzona"]).copy()
         frame["species"] = frame["Especie"].map(normalize_species)

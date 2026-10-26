@@ -36,10 +36,4 @@ uv run --with copernicusmarine --with pyarrow python scripts/download_cmems.py -
 
 `--start` cambia el inicio. El valor por defecto es `2023-01-01`, que es el comienzo de la serie actual.
 
-Los NetCDF nuevos quedan en `data/`, con el rango de fechas en el nombre. Los archivos antiguos no se borran.
-
-## Qué no correr
-
-- `notebooks/download_chlorophyll.ipynb` baja medianas mensuales de JAXA GCOM-C por Earth Engine. La aplicación no las usa.
-- `notebooks/download_chlorophyll_sentinel3.ipynb` no llegó a descargar datos.
-- `notebooks/leer_ncfiles.ipynb` solo lee NetCDF que ya existen y los convierte a parquet. El script de arriba hace esa conversión al final de la descarga.
+Los NetCDF nuevos quedan en `data/`, con el rango de fechas en el nombre. Los archivos antiguos no se borran (y están ignorados por Git).

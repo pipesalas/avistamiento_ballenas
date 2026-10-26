@@ -133,10 +133,12 @@ apuntando a WordPress.
 
 ### 6. Actualizaciones posteriores
 
-Guardar los cambios de código/datos con commit y push, y ejecutar de nuevo
-`bash scripts/deploy.sh "$PROJECT_ID"`. Cada imagen tiene un tag formado por
-el commit y una marca de tiempo. Todavía no hay un workflow de GitHub Actions:
-la publicación es explícita desde el equipo autenticado.
+Al hacer `git push origin main`, el workflow de GitHub Actions
+(`.github/workflows/deploy.yml`) ejecuta automáticamente las pruebas, construye
+la imagen en Cloud Build, despliega Cloud Run y publica Firebase Hosting
+usando Workload Identity Federation (sin necesidad de guardar claves JSON en
+GitHub). También se puede desplegar manualmente desde un equipo autenticado con
+`bash scripts/deploy.sh "$PROJECT_ID"`.
 
 ## Optimizaciones implementadas
 
@@ -252,7 +254,7 @@ En otra terminal se puede consultar `http://127.0.0.1:8080/api/meta`.
 Para revisar los estáticos y rutas SPA:
 
 ```bash
-uv run --python 3.12 --with pillow==13.0.0 python scripts/build_hosting.py
+uv run --python 3.12 scripts/build_hosting.py
 npx --yes firebase-tools@15.34.0 emulators:start --only hosting --project demo-avistamientos
 ```
 
