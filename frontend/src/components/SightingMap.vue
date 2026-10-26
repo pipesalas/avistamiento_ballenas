@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { type GeoJSONSource, LngLatBounds, Map, NavigationControl, Popup } from "maplibre-gl";
+import { type GeoJSONSource, LngLatBounds, Map, NavigationControl, Popup, setWorkerUrl } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import type { FeatureCollection } from "../api";
+
+setWorkerUrl(workerUrl);
 
 const props = defineProps<{
   environment: FeatureCollection | null;
