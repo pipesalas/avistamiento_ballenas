@@ -19,12 +19,16 @@ class PublicDataMiddleware:
         is_media = scope["path"].startswith("/media/")
 
         async def send_cached(message: Message) -> None:
-            if message["type"] == "http.response.start" and message["status"] in (200, 304):
+            if message["type"] == "http.response.start":
                 headers = MutableHeaders(scope=message)
-                if is_api:
-                    headers.setdefault("Cache-Control", "public, max-age=300, s-maxage=3600")
-                elif is_media:
-                    headers.setdefault("Cache-Control", "public, max-age=86400")
+                headers.setdefault("X-Content-Type-Options", "nosniff")
+                headers.setdefault("X-Frame-Options", "DENY")
+                headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+                if message["status"] in (200, 304):
+                    if is_api:
+                        headers.setdefault("Cache-Control", "public, max-age=300, s-maxage=3600")
+                    elif is_media:
+                        headers.setdefault("Cache-Control", "public, max-age=86400")
             await send(message)
 
         # Photos are already compressed; recompressing them wastes CPU.

@@ -25,7 +25,7 @@ gcloud run deploy "$SERVICE" \
   --service-account "${SERVICE}@${PROJECT_ID}.iam.gserviceaccount.com" \
   --allow-unauthenticated \
   --cpu 1 --memory 1Gi --concurrency 8 \
-  --min 0 --max 2 --cpu-throttling --timeout 60
+  --min-instances 0 --max-instances 2 --cpu-throttling --timeout 60
 
 npx --yes firebase-tools@15.34.0 deploy \
   --only hosting --project "$PROJECT_ID" --config "$ROOT/firebase.json"

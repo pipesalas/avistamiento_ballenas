@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import maplibregl, { type GeoJSONSource, type LngLatBounds, type Map, type Popup } from "maplibre-gl";
+import { type GeoJSONSource, LngLatBounds, Map, NavigationControl, Popup } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import type { FeatureCollection } from "../api";
@@ -46,7 +46,7 @@ function extendBounds(bounds: LngLatBounds, coordinates: unknown) {
 
 function focusOnObservations() {
   if (!map || !ready || !props.fit) return;
-  const bounds = new maplibregl.LngLatBounds();
+  const bounds = new LngLatBounds();
   const features = [...(props.sightings?.features ?? []), ...(props.zones?.features ?? [])];
   for (const feature of features) extendBounds(bounds, feature.geometry?.coordinates);
   if (bounds.isEmpty()) return;
@@ -168,13 +168,13 @@ function buildPopupNode(
 
 onMounted(() => {
   if (!el.value) return;
-  map = new maplibregl.Map({
+  map = new Map({
     container: el.value,
     style: "https://tiles.openfreemap.org/styles/positron",
     center: [-73.75, -39.92],
     zoom: 11,
   });
-  map.addControl(new maplibregl.NavigationControl(), "top-right");
+  map.addControl(new NavigationControl(), "top-right");
   map.on("load", () => {
     if (!map) return;
     map.addSource("environment", { type: "geojson", data: asGeoJson(null) });
@@ -263,7 +263,7 @@ onMounted(() => {
         const features = event.features;
         if (!features?.length || !map) return;
         activePopup?.remove();
-        activePopup = new maplibregl.Popup({ maxWidth: "300px" })
+        activePopup = new Popup({ maxWidth: "300px" })
           .setLngLat(event.lngLat)
           .setDOMContent(buildPopupNode(features, kind))
           .addTo(map);

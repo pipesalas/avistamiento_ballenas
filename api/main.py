@@ -1,7 +1,7 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from functools import lru_cache
-from typing import Literal
+from typing import Annotated, Literal
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,11 +9,14 @@ from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from api.http import PublicDataMiddleware
+from api.species import slugify
 from api.store import ROOT, get_store
 
 SourceType = Literal["boat", "shore", "both"]
 VariableType = Literal["temperature", "chlorophyll", "phyc"]
 GrainType = Literal["day", "month"]
+DateParam = Annotated[str | None, Query(pattern=r"^\d{4}-\d{2}-\d{2}$")]
+TextParam = Annotated[str | None, Query(max_length=120)]
 
 
 @asynccontextmanager
@@ -22,7 +25,13 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     yield
 
 
-app = FastAPI(title="Avistamiento de mamíferos marinos", lifespan=lifespan)
+app = FastAPI(
+    title="Avistamiento de mamíferos marinos",
+    lifespan=lifespan,
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+)
 app.add_middleware(PublicDataMiddleware)
 app.add_middleware(
     CORSMiddleware,
@@ -62,7 +71,7 @@ def meta() -> dict:
 def environment(
     variable: VariableType = Query("temperature"),
     date: str = Query(..., pattern=r"^\d{4}-\d{2}-\d{2}$"),
-    depth: str = Query("surface"),
+    depth: str = Query("surface", pattern=r"^(surface|mean|\d+(\.\d+)?)$", max_length=16),
 ) -> dict:
     return _environment(variable, date, depth)
 
@@ -70,11 +79,11 @@ def environment(
 @app.get("/api/sightings")
 def sightings(
     source: SourceType = Query("both"),
-    date: str | None = None,
-    date_from: str | None = None,
-    date_to: str | None = None,
-    species: str | None = None,
-    behavior: str | None = None,
+    date: DateParam = None,
+    date_from: DateParam = None,
+    date_to: DateParam = None,
+    species: TextParam = None,
+    behavior: TextParam = None,
 ) -> dict:
     return get_store().sightings(source, date, date_from, date_to, species, behavior)
 
@@ -82,14 +91,16 @@ def sightings(
 @app.get("/api/sightings.csv")
 def sightings_csv(
     source: SourceType = Query("both"),
-    date: str | None = None,
-    date_from: str | None = None,
-    date_to: str | None = None,
-    species: str | None = None,
-    behavior: str | None = None,
+    date: DateParam = None,
+    date_from: DateParam = None,
+    date_to: DateParam = None,
+    species: TextParam = None,
+    behavior: TextParam = None,
 ) -> Response:
     csv_text = get_store().sightings_csv(source, date, date_from, date_to, species, behavior)
-    filename = f"avistamientos_{species or 'todos'}_{date or 'historico'}.csv"
+    safe_species = slugify(species) if species else "todos"
+    safe_date = date or "historico"
+    filename = f"avistamientos_{safe_species or 'todos'}_{safe_date}.csv"
     return Response(
         content=csv_text,
         media_type="text/csv; charset=utf-8",
@@ -99,24 +110,24 @@ def sightings_csv(
 
 @app.get("/api/shore-zones")
 def shore_zones(
-    date: str | None = None,
-    date_from: str | None = None,
-    date_to: str | None = None,
-    species: str | None = None,
+    date: DateParam = None,
+    date_from: DateParam = None,
+    date_to: DateParam = None,
+    species: TextParam = None,
 ) -> dict:
     return get_store().shore_zones(date, date_from, date_to, species)
 
 
 @app.get("/api/tracks")
-def tracks(date: str | None = None) -> dict:
+def tracks(date: DateParam = None) -> dict:
     return get_store().tracks(date)
 
 
 @app.get("/api/photos")
 def photos(
     source: SourceType = Query("both"),
-    date: str | None = None,
-    species: str | None = None,
+    date: DateParam = None,
+    species: TextParam = None,
 ) -> list:
     return get_store().photos(source, date, species)
 
@@ -129,7 +140,7 @@ def stats_species(source: SourceType = Query("both")) -> list:
 @app.get("/api/stats/timeline")
 def stats_timeline(
     source: SourceType = Query("both"),
-    species: str | None = None,
+    species: TextParam = None,
     grain: GrainType = Query("day"),
 ) -> list:
     return get_store().stats_timeline(source, species, grain)
@@ -138,14 +149,14 @@ def stats_timeline(
 @app.get("/api/stats/seasonality")
 def stats_seasonality(
     source: SourceType = Query("both"),
-    species: str | None = None,
+    species: TextParam = None,
 ) -> list:
     return get_store().stats_seasonality(source, species)
 
 
 @app.get("/api/stats/behavior")
 def stats_behavior(
-    species: str | None = None,
+    species: TextParam = None,
     source: SourceType = Query("both"),
 ) -> list:
     return get_store().stats_behavior(species, source)

@@ -25,6 +25,28 @@ if ! gcloud artifacts repositories describe avistamientos --location "$REGION" -
     --repository-format docker --location "$REGION" --project "$PROJECT_ID"
 fi
 
+CLEANUP_POLICY_FILE="$(mktemp)"
+cat > "$CLEANUP_POLICY_FILE" <<'EOF'
+[
+  {
+    "name": "keep-recent-5",
+    "action": {"type": "Keep"},
+    "mostRecentVersions": {"keepCount": 5}
+  },
+  {
+    "name": "delete-older-than-7d",
+    "action": {"type": "Delete"},
+    "condition": {"olderThan": "604800s"}
+  }
+]
+EOF
+gcloud artifacts repositories set-cleanup-policies avistamientos \
+  --location "$REGION" \
+  --project "$PROJECT_ID" \
+  --policy "$CLEANUP_POLICY_FILE" \
+  --no-dry-run >/dev/null
+rm -f "$CLEANUP_POLICY_FILE"
+
 for ACCOUNT in avistamientos-api avistamientos-build github-deploy; do
   if ! gcloud iam service-accounts describe "${ACCOUNT}@${PROJECT_ID}.iam.gserviceaccount.com" --project "$PROJECT_ID" >/dev/null 2>&1; then
     gcloud iam service-accounts create "$ACCOUNT" --project "$PROJECT_ID"
@@ -44,7 +66,7 @@ for ROLE in \
   roles/run.admin \
   roles/firebasehosting.admin \
   roles/cloudbuild.builds.editor \
-  roles/storage.admin \
+  roles/storage.objectAdmin \
   roles/serviceusage.serviceUsageConsumer \
   roles/viewer; do
   gcloud projects add-iam-policy-binding "$PROJECT_ID" \
@@ -65,6 +87,7 @@ if ! gcloud iam workload-identity-pools describe github --location=global --proj
     --project "$PROJECT_ID"
 fi
 
+OIDC_CONDITION="assertion.repository == '${GITHUB_REPO}' && assertion.ref == 'refs/heads/main'"
 if ! gcloud iam workload-identity-pools providers describe github-provider --workload-identity-pool=github --location=global --project "$PROJECT_ID" >/dev/null 2>&1; then
   gcloud iam workload-identity-pools providers create-oidc github-provider \
     --location="global" \
@@ -72,8 +95,14 @@ if ! gcloud iam workload-identity-pools providers describe github-provider --wor
     --display-name="GitHub OIDC Provider" \
     --issuer-uri="https://token.actions.githubusercontent.com" \
     --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository,attribute.ref=assertion.ref" \
-    --attribute-condition="assertion.repository == '${GITHUB_REPO}'" \
+    --attribute-condition="$OIDC_CONDITION" \
     --project "$PROJECT_ID"
+else
+  gcloud iam workload-identity-pools providers update-oidc github-provider \
+    --location="global" \
+    --workload-identity-pool="github" \
+    --attribute-condition="$OIDC_CONDITION" \
+    --project "$PROJECT_ID" >/dev/null
 fi
 
 PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"

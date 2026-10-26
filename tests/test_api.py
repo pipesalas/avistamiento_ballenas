@@ -59,6 +59,22 @@ def test_timeline_and_validation() -> None:
     res_ok = client.get("/api/stats/timeline?source=both&grain=day")
     assert res_ok.status_code == 200
     assert len(res_ok.json()) > 0
+    assert res_ok.headers["X-Content-Type-Options"] == "nosniff"
+    assert res_ok.headers["X-Frame-Options"] == "DENY"
+    assert res_ok.headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
 
     res_bad = client.get("/api/sightings?source=invalid")
     assert res_bad.status_code == 422
+
+    res_bad_date = client.get("/api/sightings?date=not-a-date")
+    assert res_bad_date.status_code == 422
+
+    res_bad_depth = client.get("/api/environment?variable=temperature&date=2024-01-01&depth=abc")
+    assert res_bad_depth.status_code == 422
+
+    res_csv = client.get('/api/sightings.csv?species=Ballena"%0d%0aX-Injected:1')
+    assert res_csv.status_code == 200
+    assert res_csv.headers["Content-Disposition"] == 'attachment; filename="avistamientos_ballena-x-injected-1_historico.csv"'
+
+    for doc_path in ("/docs", "/redoc", "/openapi.json"):
+        assert client.get(doc_path).status_code == 404
