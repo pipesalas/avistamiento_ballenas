@@ -65,6 +65,10 @@ onMounted(async () => {
   <main class="page">
     <p v-if="error" class="error">{{ error }}</p>
     <div v-else-if="loading" class="skeleton-stack" aria-busy="true">
+      <div class="loading-banner" role="status" aria-live="polite">
+        <span class="spinner" aria-hidden="true"></span>
+        <span>Cargando datos del monitoreo…</span>
+      </div>
       <div class="skeleton hero-skeleton"></div>
       <div class="kpi-grid">
         <div v-for="n in 4" :key="n" class="skeleton kpi-skeleton"></div>

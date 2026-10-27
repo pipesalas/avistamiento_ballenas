@@ -97,7 +97,15 @@ watch(() => props.slug, load);
 <template>
   <main class="page">
     <p v-if="error" class="error">{{ error }}</p>
-    <template v-else-if="species">
+    <div v-else-if="!species" class="skeleton-stack" aria-busy="true">
+      <div class="loading-banner" role="status" aria-live="polite">
+        <span class="spinner" aria-hidden="true"></span>
+        <span>Cargando ficha de la especie…</span>
+      </div>
+      <div class="skeleton hero-skeleton"></div>
+      <div class="skeleton panel-skeleton"></div>
+    </div>
+    <template v-else>
       <h1>
         <i class="swatch-dot" :style="{ background: species.color }"></i>
         {{ species.short }}
@@ -109,7 +117,10 @@ watch(() => props.slug, load);
       </div>
       <section class="panel">
         <h2>Fotos</h2>
-        <p v-if="!loaded" class="note">Cargando…</p>
+        <p v-if="!loaded" class="note loading-inline">
+          <span class="spinner sm" aria-hidden="true"></span>
+          Cargando fotos…
+        </p>
         <PhotoGallery v-else :photos="photos" />
       </section>
       <section class="panel">
@@ -117,7 +128,6 @@ watch(() => props.slug, load);
         <p class="note">Puntos con borde blanco corresponden a salidas en barco; polígonos y puntos con borde negro a subzonas de orilla.</p>
         <div class="species-map">
           <SightingMap
-            v-if="loaded"
             ref="mapRef"
             :environment="null"
             :tracks="null"
@@ -125,6 +135,10 @@ watch(() => props.slug, load);
             :sightings="sightings"
             :fit="true"
           />
+          <div v-if="!loaded" class="map-loader" role="status" aria-live="polite">
+            <span class="spinner" aria-hidden="true"></span>
+            <span>Cargando avistamientos…</span>
+          </div>
         </div>
       </section>
       <section class="panel">

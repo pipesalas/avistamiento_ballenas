@@ -42,7 +42,7 @@ const sightings = ref<FeatureCollection | null>(null);
 const photos = ref<Photo[]>([]);
 const behaviorRows = ref<BehaviorRow[]>([]);
 const snappedNote = ref("");
-const loading = ref(false);
+const loading = ref(true);
 const ready = ref(false);
 const legendCollapsed = ref(typeof window !== "undefined" ? window.innerWidth <= 860 : false);
 const photosCollapsed = ref(false);
@@ -210,6 +210,7 @@ async function load() {
 }
 
 onMounted(async () => {
+  loading.value = true;
   try {
     const [metaValue, statsValue] = await Promise.all([getMeta(), getSpeciesStats("both")]);
     meta.value = metaValue;
@@ -222,6 +223,7 @@ onMounted(async () => {
     syncQuery();
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : "No se pudo cargar el mapa";
+    loading.value = false;
   }
 });
 
@@ -284,7 +286,10 @@ watch(heatmap, () => {
               Mapa de calor
             </button>
             <a :href="csvHref" download class="layer-toggle link-chip">Descargar CSV</a>
-            <span v-if="loading" class="note toolbar-status">Cargando…</span>
+            <span v-if="loading || !ready" class="note toolbar-status loading-inline">
+              <span class="spinner sm" aria-hidden="true"></span>
+              Cargando…
+            </span>
             <span v-else-if="sightings" class="note toolbar-status">
               {{ sightings.features.length }} avistamientos
               <template v-if="source === 'shore' && zones"> · {{ zones.features.length }} subzonas</template>
@@ -324,7 +329,6 @@ watch(heatmap, () => {
       </div>
       <div class="map-canvas">
       <SightingMap
-        v-if="ready"
         :environment="seaOn && date ? environment : null"
         :tracks="source === 'boat' ? tracks : null"
         :zones="source === 'shore' ? zones : null"
@@ -332,7 +336,11 @@ watch(heatmap, () => {
         :fit="!!date"
         :heatmap="heatmap"
       />
-      <p v-if="showEmpty" class="map-empty">
+      <div v-if="(loading || !ready) && !error" class="map-loader" role="status" aria-live="polite">
+        <span class="spinner" aria-hidden="true"></span>
+        <span>Cargando avistamientos…</span>
+      </div>
+      <p v-else-if="showEmpty" class="map-empty">
         Este día no hay avistamientos con este filtro.
         <button v-if="previousDay" type="button" @click="date = previousDay">Ver {{ formatDate(previousDay) }}</button>
         <button v-if="species" type="button" @click="toggleSpecies(species)">Quitar especie</button>
@@ -390,7 +398,10 @@ watch(heatmap, () => {
           </button>
         </div>
         <template v-if="!photosCollapsed">
-          <p v-if="!ready" class="note">Cargando…</p>
+          <p v-if="!ready || loading" class="note loading-inline">
+            <span class="spinner sm" aria-hidden="true"></span>
+            Cargando fotos…
+          </p>
           <PhotoGallery v-else :photos="photos" />
         </template>
       </section>
