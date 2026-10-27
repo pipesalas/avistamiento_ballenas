@@ -17,12 +17,17 @@ let observer: ResizeObserver | null = null;
 
 function render() {
   if (!chart) return;
+  const compact = (el.value?.clientWidth ?? 800) < 520;
   const names = props.rows.map((row) => row.short);
   chart.setOption({
-    tooltip: { trigger: "axis" },
+    tooltip: { trigger: "axis", confine: true },
     legend: { data: ["Barco", "Orilla"] },
-    grid: { left: 48, right: 16, bottom: 80, top: 32 },
-    xAxis: { type: "category", data: names, axisLabel: { rotate: 35, interval: 0 } },
+    grid: { left: compact ? 40 : 48, right: compact ? 10 : 16, bottom: compact ? 92 : 80, top: 32 },
+    xAxis: {
+      type: "category",
+      data: names,
+      axisLabel: { rotate: compact ? 42 : 35, interval: 0, fontSize: compact ? 11 : 12 },
+    },
     yAxis: { type: "value", name: "Ejemplares" },
     series: [
       {
@@ -49,7 +54,10 @@ onMounted(() => {
     if (row) router.push(`/especies/${row.slug}`);
   });
   render();
-  observer = new ResizeObserver(() => chart?.resize());
+  observer = new ResizeObserver(() => {
+    render();
+    chart?.resize();
+  });
   observer.observe(el.value);
 });
 

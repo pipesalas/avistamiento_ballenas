@@ -20,6 +20,7 @@ const empty: FeatureCollection = { type: "FeatureCollection", features: [] };
 const el = ref<HTMLDivElement | null>(null);
 let map: Map | null = null;
 let activePopup: Popup | null = null;
+let resizeObserver: ResizeObserver | null = null;
 let ready = false;
 
 function flyToPoint(lon: number, lat: number) {
@@ -53,8 +54,11 @@ function focusOnObservations() {
   const features = [...(props.sightings?.features ?? []), ...(props.zones?.features ?? [])];
   for (const feature of features) extendBounds(bounds, feature.geometry?.coordinates);
   if (bounds.isEmpty()) return;
+  const narrow = (el.value?.clientWidth ?? 860) < 640;
   map.fitBounds(bounds, {
-    padding: { top: 24, left: 312, right: 48, bottom: 24 },
+    padding: narrow
+      ? { top: 56, left: 24, right: 24, bottom: 24 }
+      : { top: 24, left: 312, right: 48, bottom: 24 },
     maxZoom: 12,
     duration: 450,
   });
@@ -266,7 +270,7 @@ onMounted(() => {
         const features = event.features;
         if (!features?.length || !map) return;
         activePopup?.remove();
-        activePopup = new Popup({ maxWidth: "300px" })
+        activePopup = new Popup({ maxWidth: "min(300px, calc(100vw - 32px))" })
           .setLngLat(event.lngLat)
           .setDOMContent(buildPopupNode(features, kind))
           .addTo(map);
@@ -284,10 +288,13 @@ onMounted(() => {
     ready = true;
     sync();
   });
+  resizeObserver = new ResizeObserver(() => map?.resize());
+  resizeObserver.observe(el.value);
 });
 
 watch(() => [props.environment, props.tracks, props.zones, props.sightings, props.fit, props.heatmap], sync);
 onBeforeUnmount(() => {
+  resizeObserver?.disconnect();
   map?.remove();
   map = null;
 });

@@ -6,6 +6,8 @@ import { formatDate } from "../api";
 
 const props = defineProps<{ photos: Photo[] }>();
 const selectedIndex = ref<number | null>(null);
+let touchStartX: number | null = null;
+let touchStartY: number | null = null;
 
 const selected = computed(() =>
   selectedIndex.value !== null ? (props.photos[selectedIndex.value] ?? null) : null,
@@ -22,6 +24,25 @@ function close() {
 function step(delta: number) {
   if (selectedIndex.value === null || !props.photos.length) return;
   selectedIndex.value = (selectedIndex.value + delta + props.photos.length) % props.photos.length;
+}
+
+function onTouchStart(event: TouchEvent) {
+  const touch = event.changedTouches[0];
+  if (!touch) return;
+  touchStartX = touch.clientX;
+  touchStartY = touch.clientY;
+}
+
+function onTouchEnd(event: TouchEvent) {
+  const touch = event.changedTouches[0];
+  if (!touch || touchStartX === null || touchStartY === null) return;
+  const dx = touch.clientX - touchStartX;
+  const dy = touch.clientY - touchStartY;
+  touchStartX = null;
+  touchStartY = null;
+  if (Math.abs(dx) > 44 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+    step(dx < 0 ? 1 : -1);
+  }
 }
 
 function onKey(event: KeyboardEvent) {
@@ -67,6 +88,8 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKey));
       aria-modal="true"
       :aria-label="selected.caption"
       @click="close"
+      @touchstart.passive="onTouchStart"
+      @touchend.passive="onTouchEnd"
     >
       <button type="button" class="lightbox-btn lightbox-close" aria-label="Cerrar" @click.stop="close">×</button>
       <button

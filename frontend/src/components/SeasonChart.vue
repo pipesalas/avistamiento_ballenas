@@ -16,6 +16,7 @@ let observer: ResizeObserver | null = null;
 
 function render() {
   if (!chart) return;
+  const compact = (el.value?.clientWidth ?? 800) < 520;
   const years = [...new Set(props.rows.map((row) => row.year))].sort();
   const cells = new Map<string, number>();
   for (const row of props.rows) {
@@ -27,15 +28,21 @@ function render() {
   );
   chart.setOption({
     tooltip: {
+      confine: true,
       formatter: (params: unknown) => {
         const point = params as { data: number[] };
         const [month, yearIndex, value] = point.data;
         return `${months[month]} ${years[yearIndex]}: ${value} ejemplares`;
       },
     },
-    grid: { left: 56, right: 16, bottom: 32, top: 16 },
-    xAxis: { type: "category", data: months, name: "Mes" },
-    yAxis: { type: "category", data: years.map(String), name: "Año" },
+    grid: { left: compact ? 42 : 56, right: compact ? 8 : 16, bottom: compact ? 40 : 32, top: 16 },
+    xAxis: {
+      type: "category",
+      data: months,
+      name: compact ? "" : "Mes",
+      axisLabel: { interval: 0, rotate: compact ? 40 : 0, fontSize: compact ? 10 : 12 },
+    },
+    yAxis: { type: "category", data: years.map(String), name: compact ? "" : "Año" },
     visualMap: {
       min: 0,
       max: Math.max(1, ...data.map((cell) => cell[2])),
@@ -51,6 +58,7 @@ function render() {
       data,
       label: {
         show: true,
+        fontSize: compact ? 10 : 12,
         formatter: (params: unknown) => {
           const point = params as { data: number[] };
           return point.data[2] ? String(point.data[2]) : "";
@@ -64,7 +72,10 @@ onMounted(() => {
   if (!el.value) return;
   chart = echarts.init(el.value);
   render();
-  observer = new ResizeObserver(() => chart?.resize());
+  observer = new ResizeObserver(() => {
+    render();
+    chart?.resize();
+  });
   observer.observe(el.value);
 });
 

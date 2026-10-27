@@ -27,9 +27,11 @@ function render() {
       shoreByDate.set(row.date, (shoreByDate.get(row.date) ?? 0) + row.individuals);
     }
   }
+  const compact = (el.value?.clientWidth ?? 800) < 520;
   chart.setOption({
     tooltip: {
       trigger: "axis",
+      confine: true,
       formatter: (params: unknown) => {
         const list = Array.isArray(params) ? params : [params];
         const first = list[0] as { axisValue?: string };
@@ -42,12 +44,13 @@ function render() {
       },
     },
     legend: { data: ["Barco", "Orilla"] },
-    grid: { left: 48, right: 16, bottom: 64, top: 32 },
+    grid: { left: compact ? 40 : 48, right: compact ? 10 : 16, bottom: 64, top: 32 },
     dataZoom: [{ type: "inside" }, { type: "slider", height: 20, bottom: 8 }],
     xAxis: {
       type: "category",
       data: dates,
       axisLabel: {
+        fontSize: compact ? 11 : 12,
         formatter: (val: string) => (val.length === 10 ? formatDate(val) : val),
       },
     },
@@ -81,7 +84,10 @@ onMounted(() => {
     router.push({ path: "/", query: { source, date } });
   });
   render();
-  observer = new ResizeObserver(() => chart?.resize());
+  observer = new ResizeObserver(() => {
+    render();
+    chart?.resize();
+  });
   observer.observe(el.value);
 });
 

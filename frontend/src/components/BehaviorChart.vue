@@ -17,14 +17,19 @@ let observer: ResizeObserver | null = null;
 
 function render() {
   if (!chart) return;
+  const compact = (el.value?.clientWidth ?? 800) < 520;
   const species = [...new Set(props.rows.map((row) => row.species_short))];
   const behaviors = [...new Set(props.rows.map((row) => row.behavior))];
   chart.setOption({
     color: ["#000000", "#06C167", "#545454", "#B7B7B7", "#0B3D24", "#8EE0B0"],
-    tooltip: { trigger: "axis" },
+    tooltip: { trigger: "axis", confine: true },
     legend: { type: "scroll" },
-    grid: { left: 48, right: 16, bottom: 80, top: 40 },
-    xAxis: { type: "category", data: species, axisLabel: { rotate: 35, interval: 0 } },
+    grid: { left: compact ? 40 : 48, right: compact ? 10 : 16, bottom: compact ? 92 : 80, top: 40 },
+    xAxis: {
+      type: "category",
+      data: species,
+      axisLabel: { rotate: compact ? 42 : 35, interval: 0, fontSize: compact ? 11 : 12 },
+    },
     yAxis: { type: "value", name: "Registros" },
     series: behaviors.map((behavior) => ({
       name: behavior,
@@ -49,7 +54,10 @@ onMounted(() => {
     router.push({ path: "/", query: { source: "boat", species: row.slug, behavior: row.behavior } });
   });
   render();
-  observer = new ResizeObserver(() => chart?.resize());
+  observer = new ResizeObserver(() => {
+    render();
+    chart?.resize();
+  });
   observer.observe(el.value);
 });
 

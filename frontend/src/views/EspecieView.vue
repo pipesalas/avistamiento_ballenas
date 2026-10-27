@@ -155,7 +155,7 @@ watch(() => props.slug, load);
                 class="clickable-row"
                 @click="focusFeature(feature)"
               >
-                <td>
+                <td data-label="Fecha">
                   <RouterLink
                     :to="{
                       path: '/',
@@ -171,16 +171,16 @@ watch(() => props.slug, load);
                     {{ formatDate(String(feature.properties?.date)) }}
                   </RouterLink>
                 </td>
-                <td>
+                <td data-label="Fuente">
                   {{
                     feature.properties?.source === "boat"
                       ? "Barco"
                       : `Orilla (Subzona ${feature.properties?.subzone ?? "—"})`
                   }}
                 </td>
-                <td>{{ feature.properties?.individuals }}</td>
-                <td>{{ formatOcean(feature.properties) }}</td>
-                <td>{{ feature.properties?.behavior || feature.properties?.notes || "—" }}</td>
+                <td data-label="Ejemplares">{{ feature.properties?.individuals }}</td>
+                <td data-label="Condición del mar">{{ formatOcean(feature.properties) }}</td>
+                <td data-label="Comportamiento / Notas">{{ feature.properties?.behavior || feature.properties?.notes || "—" }}</td>
               </tr>
             </tbody>
           </table>
@@ -209,5 +209,13 @@ watch(() => props.slug, load);
 .species-map {
   position: relative;
   height: 420px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+@media (max-width: 640px) {
+  .species-map {
+    height: 300px;
+  }
 }
 </style>

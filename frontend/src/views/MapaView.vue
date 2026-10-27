@@ -44,10 +44,13 @@ const behaviorRows = ref<BehaviorRow[]>([]);
 const snappedNote = ref("");
 const loading = ref(false);
 const ready = ref(false);
-const legendCollapsed = ref(false);
+const legendCollapsed = ref(typeof window !== "undefined" ? window.innerWidth <= 860 : false);
+const photosCollapsed = ref(false);
 let requestId = 0;
 
 const empty: FeatureCollection = { type: "FeatureCollection", features: [] };
+
+const activeSpecies = computed(() => stats.value.find((item) => item.slug === species.value) ?? null);
 
 const activeDates = computed(() => {
   if (!meta.value) return [];
@@ -270,23 +273,25 @@ watch(heatmap, () => {
               @change="onCalendar"
             />
           </div>
-          <button type="button" class="layer-toggle" :class="{ active: seaOn }" @click="toggleSea">Capa del mar</button>
-          <button
-            type="button"
-            class="layer-toggle"
-            :class="{ active: heatmap }"
-            @click="heatmap = !heatmap"
-          >
-            Mapa de calor
-          </button>
-          <a :href="csvHref" download class="layer-toggle link-chip">Descargar CSV</a>
-          <span v-if="loading" class="note">Cargando…</span>
-          <span v-else-if="sightings" class="note">
-            {{ sightings.features.length }} avistamientos
-            <template v-if="source === 'shore' && zones"> · {{ zones.features.length }} subzonas</template>
-          </span>
+          <div class="toolbar-actions">
+            <button type="button" class="layer-toggle" :class="{ active: seaOn }" @click="toggleSea">Capa del mar</button>
+            <button
+              type="button"
+              class="layer-toggle"
+              :class="{ active: heatmap }"
+              @click="heatmap = !heatmap"
+            >
+              Mapa de calor
+            </button>
+            <a :href="csvHref" download class="layer-toggle link-chip">Descargar CSV</a>
+            <span v-if="loading" class="note toolbar-status">Cargando…</span>
+            <span v-else-if="sightings" class="note toolbar-status">
+              {{ sightings.features.length }} avistamientos
+              <template v-if="source === 'shore' && zones"> · {{ zones.features.length }} subzonas</template>
+            </span>
+          </div>
         </div>
-        <div v-if="seaOn" class="toolbar-row">
+        <div v-if="seaOn" class="toolbar-row sea-controls">
           <label class="field inline">
             <span>Variable</span>
             <select v-model="variable">
@@ -334,7 +339,13 @@ watch(heatmap, () => {
       </p>
       <aside class="legend" :class="{ raised: !!date, collapsed: legendCollapsed }">
         <div class="legend-header">
-          <strong>Leyenda y filtro</strong>
+          <div class="legend-title">
+            <strong>Leyenda y filtro</strong>
+            <span v-if="legendCollapsed && activeSpecies" class="legend-active-pill">
+              <i :style="{ background: activeSpecies.color }"></i>
+              {{ activeSpecies.short }}
+            </span>
+          </div>
           <button
             type="button"
             class="legend-toggle"
@@ -365,10 +376,23 @@ watch(heatmap, () => {
         </div>
       </aside>
       </div>
-      <section v-if="date" class="photo-strip">
-        <h2>Fotos</h2>
-        <p v-if="!ready" class="note">Cargando…</p>
-        <PhotoGallery v-else :photos="photos" />
+      <section v-if="date" class="photo-strip" :class="{ empty: ready && !photos.length, collapsed: photosCollapsed }">
+        <div class="photo-strip-header">
+          <h2>Fotos<template v-if="ready && photos.length"> ({{ photos.length }})</template></h2>
+          <button
+            v-if="ready && photos.length"
+            type="button"
+            class="legend-toggle"
+            :aria-expanded="!photosCollapsed"
+            @click="photosCollapsed = !photosCollapsed"
+          >
+            {{ photosCollapsed ? "Mostrar" : "Ocultar" }}
+          </button>
+        </div>
+        <template v-if="!photosCollapsed">
+          <p v-if="!ready" class="note">Cargando…</p>
+          <PhotoGallery v-else :photos="photos" />
+        </template>
       </section>
     </div>
   </div>
