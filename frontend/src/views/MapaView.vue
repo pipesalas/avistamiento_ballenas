@@ -11,7 +11,6 @@ import {
   getSightings,
   getSpeciesStats,
   getTracks,
-  sightingsCsvUrl,
   type BehaviorRow,
   type FeatureCollection,
   type Meta,
@@ -73,13 +72,6 @@ const previousDay = computed(() => {
 const showEmpty = computed(
   () => ready.value && !loading.value && !!date.value && (sightings.value?.features.length ?? 0) === 0,
 );
-const csvHref = computed(() => {
-  const query: Record<string, string> = { source: source.value };
-  if (date.value) query.date = date.value;
-  if (species.value) query.species = species.value;
-  if (behavior.value && species.value) query.behavior = behavior.value;
-  return sightingsCsvUrl(query);
-});
 
 function datesFor(next: "boat" | "shore") {
   if (!meta.value) return [];
@@ -285,7 +277,6 @@ watch(heatmap, () => {
             >
               Mapa de calor
             </button>
-            <a :href="csvHref" download class="layer-toggle link-chip">Descargar CSV</a>
             <span v-if="loading || !ready" class="note toolbar-status loading-inline">
               <span class="spinner sm" aria-hidden="true"></span>
               Cargando…

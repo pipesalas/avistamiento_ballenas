@@ -7,7 +7,6 @@ import {
   getSeasonality,
   getSpeciesStats,
   getTimeline,
-  sightingsCsvUrl,
   type BehaviorRow,
   type Meta,
   type SeasonRow,
@@ -89,7 +88,6 @@ onMounted(async () => {
         </p>
         <div class="hero-actions">
           <RouterLink class="cta" to="/">Ver el mapa</RouterLink>
-          <a class="cta secondary" :href="sightingsCsvUrl()" download>Descargar base completa (CSV)</a>
         </div>
       </section>
       <section class="kpi-grid" aria-label="Indicadores generales">

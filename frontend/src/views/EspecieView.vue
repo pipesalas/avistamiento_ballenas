@@ -9,7 +9,6 @@ import {
   getSeasonality,
   getShoreZones,
   getSightings,
-  sightingsCsvUrl,
   type BehaviorRow,
   type FeatureCollection,
   type Meta,
@@ -113,7 +112,6 @@ watch(() => props.slug, load);
       <p class="lead">{{ species.name }}</p>
       <div class="hero-actions">
         <RouterLink class="cta" :to="{ path: '/', query: { species: species.slug } }">Ver en el mapa</RouterLink>
-        <a class="cta secondary" :href="sightingsCsvUrl({ species: species.slug })" download>Descargar CSV</a>
       </div>
       <section class="panel">
         <h2>Fotos</h2>
