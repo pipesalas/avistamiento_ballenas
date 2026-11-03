@@ -1,39 +1,24 @@
 # Descargar datos satelitales
 
-La aplicación lee `data/temperature.parquet` y `data/chlorophyll.parquet`. Esos archivos salen de Copernicus Marine, no de los notebooks de Google Earth Engine ni de Sentinel Hub.
+La aplicación lee `data/temperature.parquet` y `data/chlorophyll.parquet`. Para maximizar la resolución espacial en la costa sin inflar el peso del repositorio ni del contenedor, se descargan únicamente las **fechas con avistamientos** (barco y orilla) dentro del recorte del área de estudio:
 
-El script que hay que correr es [`download_cmems.py`](download_cmems.py). Baja el mismo recorte que ya usa el mapa:
+- **Temperatura superficial del mar (`temperature`):** **NASA JPL MUR SST v4.1** (`MUR-JPL-L4-GLOB-v4.1`), grilla diaria Level 4 libre de nubes a **0,01° (~1 km)**, leída vía Cloud-Optimized GeoTIFF (`https://data.source.coop/ausantarctic/ghrsst-mur-v2`).
+- **Clorofila-a (`chlorophyll`):** **NOAA CoastWatch Multi-sensor (VIIRS SNPP + NOAA-20 + Sentinel-3A OLCI) DINEOF** (`noaacwNPPN20S3ASCIDINEOF2kmDaily` / `chloraMergedDINEOF2kmGlobalDailyWW00`), grilla diaria reconstruida (gap-filled) a **~0,02° (~2 km)**, leída desde el servidor THREDDS NCSS de NOAA CoastWatch (`https://coastwatch.noaa.gov/thredds/ncss/grid/chloraMergedDINEOF2kmGlobalDailyWW00`).
+- **Bounding box por defecto:** longitud `−74,15°` a `−73,35°` y latitud `−40,30°` a `−39,60°` (cubre todas las subzonas de orilla 1–7, todos los tracks de navegación y avistamientos con ~35 km de margen mar adentro y norte-sur).
+- ** Compresión:** `float32` con `zstd` nivel 9 (~1,7 MB para temperatura y ~1,6 MB para clorofila).
 
-- Temperatura diaria, `cmems_mod_glo_phy-thetao_anfc_0.083deg_P1D-m`
-- Clorofila y fitoplancton, `cmems_mod_glo_bgc-pft_anfc_0.25deg_P1D-m`
-- Latitud −41° a −39°. La longitud va de −74,5° (unos 75 km mar adentro de Huiro) hasta −73,42° en temperatura y hasta −73,25° en clorofila. El borde este está al menos 10 km más al este que el recorte anterior. La grilla de clorofila mide 0,25°, así que esa capa avanza una celda entera, unos 21 km. Los parquet se guardan en float32 con compresión zstd.
-- Los 11 niveles entre 1,5 m y 18,5 m
-- Desde el 1 de enero de 2023 hasta el día en que se ejecuta
-
-Al terminar, reemplaza los dos parquet. Hay que reiniciar la API para que tome los archivos nuevos.
-
-## Cuenta
-
-Hace falta una cuenta gratuita de [Copernicus Marine](https://data.marine.copernicus.eu/register). Se inicia sesión una sola vez. Las credenciales quedan en `~/.copernicusmarine/.copernicusmarine-credentials`.
-
-```bash
-uv run --with copernicusmarine copernicusmarine login
-```
+No requiere cuentas ni credenciales.
 
 ## Descarga
 
 Desde la raíz del repositorio:
 
 ```bash
-uv run --with copernicusmarine --with pyarrow python scripts/download_cmems.py
+uv run --with-requirements requirements-api.txt --with rasterio --with scipy --with xarray python scripts/download_cmems.py
 ```
 
-Para cerrar la serie en otra fecha:
+Para ajustar el recorte espacial (`LON_MIN LAT_MIN LON_MAX LAT_MAX`):
 
 ```bash
-uv run --with copernicusmarine --with pyarrow python scripts/download_cmems.py --end 2026-09-29
+uv run --with-requirements requirements-api.txt --with rasterio --with scipy --with xarray python scripts/download_cmems.py --bbox -74.15 -40.30 -73.35 -39.60
 ```
-
-`--start` cambia el inicio. El valor por defecto es `2023-01-01`, que es el comienzo de la serie actual.
-
-Los NetCDF nuevos quedan en `data/`, con el rango de fechas en el nombre. Los archivos antiguos no se borran (y están ignorados por Git).
