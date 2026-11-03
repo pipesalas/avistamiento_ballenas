@@ -294,7 +294,7 @@ watch(heatmap, () => {
               <option v-for="item in meta?.environment.variables" :key="item.id" :value="item.id">{{ item.label }}</option>
             </select>
           </label>
-          <label v-if="variable === 'temperature'" class="field inline">
+          <label v-if="variable === 'temperature' && (meta?.environment.depths.length ?? 0) > 1" class="field inline">
             <span>Profundidad</span>
             <select v-model="depth">
               <option value="surface">Superficie ({{ meta?.environment.surface_depth }} m)</option>

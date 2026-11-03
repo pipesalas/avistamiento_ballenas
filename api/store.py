@@ -127,6 +127,17 @@ def _cell_ring(lon: float, lat: float, size: float) -> list[list[float]]:
     ]
 
 
+def _grid_size(frame: pd.DataFrame, default: float) -> float:
+    for column in ("latitude", "longitude"):
+        if column in frame.columns:
+            unique = np.unique(frame[column].dropna().to_numpy(dtype=float))
+            if len(unique) > 1:
+                step = float(np.min(np.diff(unique)))
+                if 0 < step <= 0.25:
+                    return round(step, 5)
+    return default
+
+
 def _centroid(ring: list) -> list[float]:
     points = ring[:-1] if len(ring) > 1 and ring[0] == ring[-1] else ring
     lon = sum(point[0] for point in points) / len(points)
@@ -408,6 +419,12 @@ class DataStore:
         env_days = sorted(self._temp_days | self._chl_days)
         temp_ramp = [_hex(rgb) for rgb in TEMP_COLORS]
         chl_ramp = [_hex(rgb) for rgb in CHL_COLORS]
+        variables = [
+            {"id": "temperature", "label": "Temperatura", "unit": "°C", "ramp": temp_ramp},
+            {"id": "chlorophyll", "label": "Clorofila", "unit": "mg/m³", "ramp": chl_ramp},
+        ]
+        if "phyc" in self.chlorophyll.columns:
+            variables.append({"id": "phyc", "label": "Fitoplancton", "unit": "mmol/m³", "ramp": chl_ramp})
         return {
             "project": {
                 "title": "Monitoreo de mamíferos marinos en las localidades de Huiro y Chaihuín",
@@ -434,11 +451,7 @@ class DataStore:
                 "end": env_days[-1] if env_days else None,
                 "depths": [round(depth, 3) for depth in self.depths],
                 "surface_depth": round(self.min_depth, 3),
-                "variables": [
-                    {"id": "temperature", "label": "Temperatura", "unit": "°C", "ramp": temp_ramp},
-                    {"id": "chlorophyll", "label": "Clorofila", "unit": "mg/m³", "ramp": chl_ramp},
-                    {"id": "phyc", "label": "Fitoplancton", "unit": "mmol/m³", "ramp": chl_ramp},
-                ],
+                "variables": variables,
             },
         }
 
@@ -622,7 +635,6 @@ class DataStore:
             day = _day_frame(self.temperature, self._temp_by_day, date)
             unit = "°C"
             ramp = TEMP_COLORS
-            grid = 0.08
             if depth == "mean":
                 grouped = day.groupby(["latitude", "longitude"], as_index=False)["temperature"].mean()
                 column = "temperature"
@@ -632,13 +644,17 @@ class DataStore:
             else:
                 grouped = day[np.isclose(day["depth"].astype(float), float(depth), atol=0.02)]
                 column = "temperature"
+            grid = _grid_size(grouped, 0.01)
         elif variable in ("chlorophyll", "phyc"):
             day = _day_frame(self.chlorophyll, self._chl_by_day, date)
-            grouped = day.groupby(["latitude", "longitude"], as_index=False)[[variable]].mean()
-            column = variable
             unit = "mg/m³" if variable == "chlorophyll" else "mmol/m³"
             ramp = CHL_COLORS
-            grid = 0.2
+            column = variable
+            if variable in day.columns:
+                grouped = day.groupby(["latitude", "longitude"], as_index=False)[[variable]].mean()
+            else:
+                grouped = pd.DataFrame(columns=["latitude", "longitude", variable])
+            grid = _grid_size(grouped, round(1 / 48, 5))
         else:
             raise ValueError(variable)
 
