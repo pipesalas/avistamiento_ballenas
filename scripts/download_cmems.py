@@ -55,7 +55,18 @@ def sighting_dates_from_workbook(root: Path = ROOT) -> list[str]:
     shore = shore.dropna(subset=["Fecha", "Especie", "Subzona"]).copy()
     shore_days = pd.to_datetime(shore["Fecha"], errors="coerce").dt.strftime("%Y-%m-%d").dropna()
 
-    return sorted(set(boat_days) | set(shore_days))
+    date_pattern = re.compile(r"(?P<d>\d{2})[_:](?P<m>\d{2})[_:](?P<y>\d{4})")
+    media_days: set[str] = set()
+    for folder in (root / "data" / "tracks", root / "data" / "fotos", root / "data" / "fotos_conteo_directo"):
+        if not folder.is_dir():
+            continue
+        for item in folder.iterdir():
+            if item.is_file() and not item.name.startswith("."):
+                m = date_pattern.search(item.name)
+                if m:
+                    media_days.add(f"{m.group('y')}-{m.group('m')}-{m.group('d')}")
+
+    return sorted(set(boat_days) | set(shore_days) | media_days)
 
 
 def discover_chl_files(years: list[int]) -> dict[str, str]:

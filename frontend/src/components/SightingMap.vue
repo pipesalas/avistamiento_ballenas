@@ -52,6 +52,9 @@ function focusOnObservations() {
   if (!map || !ready || !props.fit) return;
   const bounds = new LngLatBounds();
   const features = [...(props.sightings?.features ?? []), ...(props.zones?.features ?? [])];
+  if (!features.length && props.tracks?.features.length) {
+    features.push(...props.tracks.features);
+  }
   for (const feature of features) extendBounds(bounds, feature.geometry?.coordinates);
   if (bounds.isEmpty()) return;
   const narrow = (el.value?.clientWidth ?? 860) < 640;

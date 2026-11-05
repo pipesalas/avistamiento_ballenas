@@ -70,7 +70,13 @@ const previousDay = computed(() => {
   return index > 0 ? activeDates.value[index - 1] : "";
 });
 const showEmpty = computed(
-  () => ready.value && !loading.value && !!date.value && (sightings.value?.features.length ?? 0) === 0,
+  () =>
+    ready.value &&
+    !loading.value &&
+    !!date.value &&
+    (sightings.value?.features.length ?? 0) === 0 &&
+    (!!species.value || source.value !== "boat" || (tracks.value?.features.length ?? 0) === 0) &&
+    photos.value.length === 0,
 );
 
 function datesFor(next: "boat" | "shore") {
@@ -172,7 +178,7 @@ async function load() {
   const zoneQuery: Record<string, string> = {};
   if (date.value) zoneQuery.date = date.value;
   if (species.value) zoneQuery.species = species.value;
-  const photoQuery: Record<string, string> = { source: source.value };
+  const photoQuery: Record<string, string> = { source: "both" };
   if (date.value) photoQuery.date = date.value;
   if (species.value) photoQuery.species = species.value;
   try {
