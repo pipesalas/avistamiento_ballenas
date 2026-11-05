@@ -57,7 +57,7 @@ def sighting_dates_from_workbook(root: Path = ROOT) -> list[str]:
 
     date_pattern = re.compile(r"(?P<d>\d{2})[_:](?P<m>\d{2})[_:](?P<y>\d{4})")
     media_days: set[str] = set()
-    for folder in (root / "data" / "tracks", root / "data" / "fotos", root / "data" / "fotos_conteo_directo"):
+    for folder in (root / "data" / "fotos", root / "data" / "fotos_conteo_directo"):
         if not folder.is_dir():
             continue
         for item in folder.iterdir():
