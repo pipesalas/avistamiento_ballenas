@@ -415,7 +415,11 @@ class DataStore:
         behaviors = sorted(
             {value for value in pd.concat([self.boat["behavior"], self.shore["behavior"]]).dropna().unique()}
         )
-        sighting_days = sorted(set(self.boat["day"]) | set(self.shore["day"]))
+        track_days = {track["date"] for track in self._tracks}
+        photo_days = {photo["date"] for photo in self._photos}
+        boat_days = sorted(set(self.boat["day"]) | track_days | photo_days)
+        shore_days = sorted(set(self.shore["day"]) | photo_days)
+        sighting_days = sorted(set(boat_days) | set(shore_days))
         env_days = sorted(self._temp_days | self._chl_days)
         temp_ramp = [_hex(rgb) for rgb in TEMP_COLORS]
         chl_ramp = [_hex(rgb) for rgb in CHL_COLORS]
@@ -439,8 +443,8 @@ class DataStore:
                 "start": sighting_days[0] if sighting_days else None,
                 "end": sighting_days[-1] if sighting_days else None,
                 "dates": sighting_days,
-                "boat_dates": sorted(set(self.boat["day"])),
-                "shore_dates": sorted(set(self.shore["day"])),
+                "boat_dates": boat_days,
+                "shore_dates": shore_days,
                 "boat_count": int(len(self.boat)),
                 "shore_count": int(len(self.shore)),
                 "boat_individuals": int(self.boat["individuals"].sum()),
