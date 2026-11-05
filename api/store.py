@@ -434,7 +434,7 @@ class DataStore:
             variables.append({"id": "phyc", "label": "Fitoplancton", "unit": "mmol/m³", "ramp": chl_ramp})
         return {
             "project": {
-                "title": "Monitoreo de mamíferos marinos en las localidades de Huiro y Chaihuín",
+                "title": "Monitoreo de mamíferos marinos de la costa de Corral",
                 "caption": "Proyecto financiado por TNC Chile, GORE Los Ríos y ONG Vuelve Al Océano.",
             },
             "species": self.species,

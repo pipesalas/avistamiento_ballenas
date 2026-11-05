@@ -9,7 +9,7 @@ const route = useRoute();
     <RouterLink class="brand" to="/">
       <img :src="'/media/logo'" alt="Vuelve al Océano" />
       <div>
-        <strong>Huiro y Chaihuín</strong>
+        <strong>Monitoreo de mamíferos marinos de la costa de Corral</strong>
         <span>Mamíferos marinos</span>
       </div>
     </RouterLink>
