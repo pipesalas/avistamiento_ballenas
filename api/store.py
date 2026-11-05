@@ -205,8 +205,8 @@ class DataStore:
         self.root = root
         self.boat = self._load_boat()
         self.shore = self._load_shore()
-        self._tracks = self._load_tracks()
         self._photos = self._load_photos()
+        self._tracks = self._load_tracks()
         self.temperature = _day_column(
             pd.read_parquet(root / "data" / "temperature.parquet")
         )
@@ -341,12 +341,15 @@ class DataStore:
         return frame.reset_index(drop=True)
 
     def _load_tracks(self) -> list[dict]:
+        valid_days = set(self.boat["day"]) | set(self.shore["day"]) | {photo["date"] for photo in self._photos}
         tracks = []
         for path in sorted((self.root / "data" / "tracks").glob("*.gpx")):
             match = DATE_IN_NAME.search(path.stem)
             if not match:
                 continue
             date = f"{match.group('y')}-{match.group('m')}-{match.group('d')}"
+            if date not in valid_days:
+                continue
             with path.open() as handle:
                 gpx = gpxpy.parse(handle)
             coordinates = []
